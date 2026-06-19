@@ -10,9 +10,10 @@ import { ScanLine, Loader2 } from "lucide-react";
 
 interface UrlInputCardProps {
   onStart?: (url: string, presetId: string) => void;
+  ctaText?: string;
 }
 
-export function UrlInputCard({ onStart }: UrlInputCardProps) {
+export function UrlInputCard({ onStart, ctaText }: UrlInputCardProps) {
   const [url, setUrl] = useState("");
   const [selectedPreset, setSelectedPreset] = useState("pre-launch");
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +58,7 @@ export function UrlInputCard({ onStart }: UrlInputCardProps) {
             ) : (
               <>
                 <ScanLine className="mr-2 h-5 w-5" />
-                Periksa Sekarang
+                {ctaText || "Periksa Sekarang"}
               </>
             )}
           </Button>

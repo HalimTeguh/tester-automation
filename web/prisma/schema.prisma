@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model CompanyProfile {
+  id                String         @id @default(cuid())
+  siteName          String
+  homeTitle         String
+  homeSubtitle      String
+  heroBadgeText     String
+  ctaText           String
+  disclaimerText    String
+  footerText        String
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  homeFeatures      HomeFeature[]
+  homeBenefits      HomeBenefit[]
+  trustBadges       TrustBadge[]
+}
+
+model HomeFeature {
+  id                 String          @id @default(cuid())
+  companyProfileId   String
+  companyProfile     CompanyProfile  @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+  icon               String
+  title              String
+  description        String
+  order              Int             @default(0)
+}
+
+model HomeBenefit {
+  id                 String          @id @default(cuid())
+  companyProfileId   String
+  companyProfile     CompanyProfile  @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+  icon               String
+  title              String
+  value              String
+  description        String
+  order              Int             @default(0)
+}
+
+model TrustBadge {
+  id                 String          @id @default(cuid())
+  companyProfileId   String
+  companyProfile     CompanyProfile  @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+  icon               String
+  label              String
+  order              Int             @default(0)
+}
+
+model AboutContent {
+  id                String           @id @default(cuid())
+  pageTitle         String
+  pageSubtitle      String
+  howItWorksTitle   String
+  benefitsTitle     String
+  roadmapTitle      String
+  roadmapSubtitle   String
+  isActive          Boolean          @default(true)
+  testTypes         TestType[]
+  howItWorksSteps   HowItWorksStep[]
+  aboutBenefits     AboutBenefit[]
+  roadmapItems      RoadmapItem[]
+}
+
+model TestType {
+  id              String        @id @default(cuid())
+  aboutContentId  String
+  aboutContent    AboutContent  @relation(fields: [aboutContentId], references: [id], onDelete: Cascade)
+  slug            String
+  icon            String
+  title           String
+  description     String
+  order           Int           @default(0)
+
+  @@unique([aboutContentId, slug])
+}
+
+model HowItWorksStep {
+  id              String        @id @default(cuid())
+  aboutContentId  String
+  aboutContent    AboutContent  @relation(fields: [aboutContentId], references: [id], onDelete: Cascade)
+  stepNumber      Int
+  title           String
+  description     String
+}
+
+model AboutBenefit {
+  id              String        @id @default(cuid())
+  aboutContentId  String
+  aboutContent    AboutContent  @relation(fields: [aboutContentId], references: [id], onDelete: Cascade)
+  text            String
+  order           Int           @default(0)
+}
+
+model RoadmapItem {
+  id              String        @id @default(cuid())
+  aboutContentId  String
+  aboutContent    AboutContent  @relation(fields: [aboutContentId], references: [id], onDelete: Cascade)
+  icon            String
+  title           String
+  description     String
+  order           Int           @default(0)
+}
+
+model SecurityContent {
+  id                 String                @id @default(cuid())
+  pageTitle          String
+  pageSubtitle       String
+  commitmentTitle    String
+  isActive           Boolean               @default(true)
+  securityCommitments SecurityCommitment[]
+  privacyCommitments  PrivacyCommitment[]
+}
+
+model SecurityCommitment {
+  id                String          @id @default(cuid())
+  securityContentId String
+  securityContent   SecurityContent @relation(fields: [securityContentId], references: [id], onDelete: Cascade)
+  icon              String
+  title             String
+  description       String
+  order             Int             @default(0)
+}
+
+model PrivacyCommitment {
+  id                String          @id @default(cuid())
+  securityContentId String
+  securityContent   SecurityContent @relation(fields: [securityContentId], references: [id], onDelete: Cascade)
+  number            Int
+  title             String
+  description       String
+}
+
+model ThemeConfig {
+  id                String     @id @default(cuid())
+  name              String
+  primary           String
+  primaryForeground String
+  secondary         String
+  accent            String
+  background        String
+  foreground        String
+  muted             String
+  border            String
+  isActive          Boolean    @default(false)
+  settings          Settings[]
+}
+
+model Settings {
+  id                  String       @id @default(cuid())
+  themeConfigId       String
+  themeConfig         ThemeConfig  @relation(fields: [themeConfigId], references: [id])
+  maintenanceMode     Boolean      @default(false)
+  allowAnonymousTest  Boolean      @default(true)
+  maxAnonymousTests   Int          @default(5)
+  defaultPreset       String       @default("pre-launch")
+  updatedAt           DateTime     @updatedAt
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  role            String          @default("user")
+  isActive        Boolean         @default(true)
+  emailVerified   Boolean         @default(false)
+  avatarUrl       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  activities      UserActivity[]
+  testRuns        TestRun[]
+  loadTests       LoadTest[]
+  webhookEndpoints WebhookEndpoint[]
+}
+
+model UserActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String
+  metadata    String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
+
+model TestRun {
+  id            String        @id @default(cuid())
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  url           String
+  preset        String
+  status        String        @default("pending")
+  overallScore  Int?
+  startedAt     DateTime      @default(now())
+  completedAt   DateTime?
+  config        String?
+  testResults   TestResult[]
+}
+
+model TestResult {
+  id          String    @id @default(cuid())
+  testRunId   String
+  testRun     TestRun   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  category    String
+  score       Int?
+  status      String    @default("pending")
+  issues      Issue[]
+}
+
+model Issue {
+  id              String      @id @default(cuid())
+  testResultId    String
+  testResult      TestResult  @relation(fields: [testResultId], references: [id], onDelete: Cascade)
+  category        String
+  severity        String
+  title           String
+  description     String
+  impact          String
+  fix             String
+  code            String?
+}
+
+model LoadTest {
+  id            String    @id @default(cuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  url           String
+  vus           Int
+  duration      Int
+  rampUp        Int
+  maxRps        Int
+  paths         String
+  status        String    @default("pending")
+  summaryJson   String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+}
+
+model WebhookEndpoint {
+  id                String             @id @default(cuid())
+  userId            String?
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  url               String
+  secret            String
+  events            String
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  webhookDeliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id                  String          @id @default(cuid())
+  webhookEndpointId   String
+  webhookEndpoint     WebhookEndpoint @relation(fields: [webhookEndpointId], references: [id], onDelete: Cascade)
+  event               String
+  payload             String
+  signature           String
+  statusCode          Int?
+  responseBody        String?
+  deliveredAt         DateTime        @default(now())
+}

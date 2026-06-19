@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Issue, Severity, TestCategory } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,13 +12,24 @@ import {
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Check, Copy, Info, XCircle } from "lucide-react";
 
+interface IssueItem {
+  id: string;
+  category: string;
+  severity: string;
+  title: string;
+  description: string;
+  impact: string;
+  fix: string;
+  code?: string;
+}
+
 interface IssueListProps {
-  issues: Issue[];
+  issues: IssueItem[];
   url?: string;
 }
 
 const severityConfig: Record<
-  Severity,
+  string,
   { label: string; icon: React.ReactNode; variant: "destructive" | "default" | "secondary" }
 > = {
   critical: {
@@ -39,14 +49,14 @@ const severityConfig: Record<
   },
 };
 
-const categoryLabel: Record<TestCategory, string> = {
+const categoryLabel: Record<string, string> = {
   functionality: "Fungsionalitas",
   performance: "Performa",
   seo: "SEO",
   security: "Keamanan",
 };
 
-function buildPrompt(issue: Issue, url?: string): string {
+function buildPrompt(issue: IssueItem, url?: string): string {
   return `Saya sedang menguji website ${url || "saya"} menggunakan WebQA dan menemukan issue berikut:
 
 Issue: ${issue.title}
@@ -63,13 +73,13 @@ Tolong jelaskan apa artinya, urutkan langkah perbaikan dari yang paling penting,
 
 export function IssueList({ issues, url }: IssueListProps) {
   const sorted = [...issues].sort((a, b) => {
-    const order = { critical: 0, warning: 1, info: 2 };
-    return order[a.severity] - order[b.severity];
+    const order: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+    return (order[a.severity] ?? 99) - (order[b.severity] ?? 99);
   });
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  async function copyPrompt(issue: Issue) {
+  async function copyPrompt(issue: IssueItem) {
     try {
       await navigator.clipboard.writeText(buildPrompt(issue, url));
       setCopiedId(issue.id);
