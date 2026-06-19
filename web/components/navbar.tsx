@@ -9,6 +9,7 @@ import { ShieldCheck, Menu, Moon, Sun, LayoutDashboard } from "lucide-react";
 const navLinks = [
   { href: "/", label: "Beranda" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/keamanan", label: "Keamanan" },
   { href: "/settings", label: "Pengaturan" },
 ];
 

@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-06-19T16:40:23.383Z",
+  "target": "http://localhost:3000",
+  "durationSeconds": 0,
+  "scenarios": [],
+  "requests": {
+    "total": 23342,
+    "perSecond": 23342
+  },
+  "latencyMs": {
+    "min": 0,
+    "max": 0,
+    "median": 0,
+    "p95": 0,
+    "p99": 0
+  },
+  "errors": {
+    "count": 0,
+    "rate": 0
+  },
+  "statusCodes": {}
+}

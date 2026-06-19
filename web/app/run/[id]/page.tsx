@@ -5,8 +5,9 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TestProgressPanel } from "@/components/test-progress-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { presets, TestCategory, TestResult } from "@/lib/mock-data";
-import { Loader2, ArrowLeft, XCircle } from "lucide-react";
+import { Loader2, ArrowLeft, XCircle, Users, Clock } from "lucide-react";
 import Link from "next/link";
 
 export default function RunPage() {
@@ -26,10 +27,37 @@ export default function RunPage() {
       issues: [],
     }))
   );
-  const [status, setStatus] = useState<"running" | "completed" | "failed">("running");
-  const [logs, setLogs] = useState<string[]>(["Memvalidasi URL...", "Menyiapkan runner..."]);
+  const [status, setStatus] = useState<"queue" | "running" | "completed" | "failed">("queue");
+  const [logs, setLogs] = useState<string[]>(["Menerima permintaan...", "Memverifikasi slot scanner..."]);
+
+  // Queue simulation
+  const [queuePosition, setQueuePosition] = useState(() => Math.floor(Math.random() * 12) + 6);
+  const [queueWaitSec, setQueueWaitSec] = useState(queuePosition * 4);
 
   useEffect(() => {
+    if (status !== "queue") return;
+
+    const interval = setInterval(() => {
+      setQueuePosition((pos) => {
+        if (pos <= 1) {
+          clearInterval(interval);
+          setStatus("running");
+          setLogs((l) => [...l, "Slot tersedia. Memulai scan..."]);
+          return 0;
+        }
+        const next = Math.max(0, pos - Math.floor(Math.random() * 3) - 1);
+        setQueueWaitSec(next * 4 + Math.floor(Math.random() * 5));
+        setLogs((l) => [...l, `Antrean: ${next} user di depan — estimasi ${next * 4}s`]);
+        return next;
+      });
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== "running") return;
+
     const categories = preset.categories;
     let current = 0;
 
@@ -64,7 +92,32 @@ export default function RunPage() {
     }, 800);
 
     return () => clearInterval(interval);
-  }, [preset, router, url, presetId]);
+  }, [status, preset, router, url, presetId]);
+
+  const statusConfig = {
+    queue: {
+      icon: <Users className="h-5 w-5 animate-pulse text-amber-500" />,
+      title: "Menunggu antrean",
+      subtitle: `Posisi antrean: ${queuePosition} user di depan — estimasi ~${queueWaitSec} detik`,
+    },
+    running: {
+      icon: <Loader2 className="h-5 w-5 animate-spin text-primary" />,
+      title: "Tes sedang berjalan",
+      subtitle: "Estimasi selesai: ~2 menit",
+    },
+    completed: {
+      icon: <div className="h-5 w-5 rounded-full bg-emerald-500" />,
+      title: "Tes selesai",
+      subtitle: "Mengalihkan ke halaman laporan...",
+    },
+    failed: {
+      icon: <XCircle className="h-5 w-5 text-destructive" />,
+      title: "Tes gagal",
+      subtitle: "Silakan coba lagi",
+    },
+  };
+
+  const currentStatus = statusConfig[status];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -81,24 +134,30 @@ export default function RunPage() {
       </div>
 
       <div className="mt-6 flex items-center gap-3 rounded-xl border border-border/60 bg-accent/30 p-4">
-        {status === "running" ? (
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-        ) : status === "completed" ? (
-          <div className="h-5 w-5 rounded-full bg-emerald-500" />
-        ) : (
-          <XCircle className="h-5 w-5 text-destructive" />
-        )}
-        <div>
-          <p className="text-sm font-semibold">
-            {status === "running" ? "Tes sedang berjalan" : "Tes selesai"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {status === "running"
-              ? "Estimasi selesai: ~2 menit"
-              : "Mengalihkan ke halaman laporan..."}
-          </p>
+        {currentStatus.icon}
+        <div className="flex-1">
+          <p className="text-sm font-semibold">{currentStatus.title}</p>
+          <p className="text-xs text-muted-foreground">{currentStatus.subtitle}</p>
         </div>
       </div>
+
+      {status === "queue" && (
+        <Card className="mt-6 border-border/80 bg-card">
+          <CardContent className="space-y-4 p-5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                Estimasi tunggu
+              </span>
+              <span className="font-semibold">~{queueWaitSec} detik</span>
+            </div>
+            <Progress value={Math.max(0, 100 - queuePosition * 5)} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              Scanner sedang sibuk. Kamu tetap di antrean agar server tidak overload saat traffic tinggi.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6">
         <TestProgressPanel results={results} />
@@ -113,9 +172,7 @@ export default function RunPage() {
                 <span className="text-muted-foreground">[{i + 1}]</span> {log}
               </div>
             ))}
-            {status === "running" && (
-              <div className="py-0.5 text-muted-foreground">...</div>
-            )}
+            {status === "running" && <div className="py-0.5 text-muted-foreground">...</div>}
           </div>
         </CardContent>
       </Card>
