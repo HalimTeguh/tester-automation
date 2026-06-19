@@ -114,7 +114,7 @@ export default function ReportPage() {
           <TabsTrigger value="ai">Tanya AI</TabsTrigger>
         </TabsList>
         <TabsContent value="issues" className="mt-4">
-          <IssueList issues={allIssues} />
+          <IssueList issues={allIssues} url={url} />
         </TabsContent>
         <TabsContent value="ai" className="mt-4">
           <Card>

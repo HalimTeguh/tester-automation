@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Issue, Severity, TestCategory } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -10,10 +11,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Info, XCircle } from "lucide-react";
+import { AlertTriangle, Check, Copy, Info, XCircle } from "lucide-react";
 
 interface IssueListProps {
   issues: Issue[];
+  url?: string;
 }
 
 const severityConfig: Record<
@@ -44,16 +46,47 @@ const categoryLabel: Record<TestCategory, string> = {
   security: "Keamanan",
 };
 
-export function IssueList({ issues }: IssueListProps) {
+function buildPrompt(issue: Issue, url?: string): string {
+  return `Saya sedang menguji website ${url || "saya"} menggunakan WebQA dan menemukan issue berikut:
+
+Issue: ${issue.title}
+Kategori: ${categoryLabel[issue.category]}
+Severity: ${severityConfig[issue.severity].label}
+Deskripsi: ${issue.description}
+Dampak: ${issue.impact}
+Cara perbaiki yang disarankan: ${issue.fix}${
+    issue.code ? `\n\nContoh kode:\n\`\`\`\n${issue.code}\n\`\`\`` : ""
+  }
+
+Tolong jelaskan apa artinya, urutkan langkah perbaikan dari yang paling penting, dan berikan contoh kode yang lebih lengkap jika memungkinkan.`;
+}
+
+export function IssueList({ issues, url }: IssueListProps) {
   const sorted = [...issues].sort((a, b) => {
     const order = { critical: 0, warning: 1, info: 2 };
     return order[a.severity] - order[b.severity];
   });
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function copyPrompt(issue: Issue) {
+    try {
+      await navigator.clipboard.writeText(buildPrompt(issue, url));
+      setCopiedId(issue.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // fallback
+      setCopiedId(null);
+    }
+  }
+
   return (
     <Accordion type="multiple" className="space-y-3">
       {sorted.map((issue) => {
         const severity = severityConfig[issue.severity];
+        const prompt = buildPrompt(issue, url);
+        const isCopied = copiedId === issue.id;
+
         return (
           <AccordionItem
             key={issue.id}
@@ -88,6 +121,35 @@ export function IssueList({ issues }: IssueListProps) {
                     <code>{issue.code}</code>
                   </pre>
                 )}
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Prompt untuk AI
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => copyPrompt(issue)}
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" />
+                          Tersalin
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          Salin Prompt
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-background p-3 font-mono text-xs leading-relaxed text-foreground/90">
+                    {prompt}
+                  </pre>
+                </div>
               </div>
             </AccordionContent>
           </AccordionItem>
