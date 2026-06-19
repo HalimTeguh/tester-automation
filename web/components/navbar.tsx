@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ShieldCheck, Menu, Moon, Sun, LayoutDashboard } from "lucide-react";
@@ -13,7 +13,7 @@ const navLinks = [
 ];
 
 export function Navbar() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -38,7 +38,7 @@ export function Navbar() {
             variant="ghost"
             size="icon"
             className="rounded-full"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            onClick={toggleTheme}
             aria-label="Toggle tema"
           >
             {resolvedTheme === "dark" ? (

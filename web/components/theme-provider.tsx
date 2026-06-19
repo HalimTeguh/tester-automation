@@ -1,71 +1,92 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 
-function ThemeProvider({
-  children,
-  ...props
-}: React.ComponentProps<typeof NextThemesProvider>) {
-  return (
-    <NextThemesProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-      {...props}
-    >
-      <ThemeHotkey />
-      {children}
-    </NextThemesProvider>
-  )
+type Theme = "light" | "dark";
+
+interface ThemeContextValue {
+  theme: Theme;
+  resolvedTheme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
 }
 
-function isTypingTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: "light",
+  resolvedTheme: "light",
+  setTheme: () => {},
+  toggleTheme: () => {},
+});
 
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  )
-}
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>("light");
+  const [mounted, setMounted] = useState(false);
 
-function ThemeHotkey() {
-  const { resolvedTheme, setTheme } = useTheme()
+  const applyTheme = useCallback((next: Theme) => {
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(next);
+    localStorage.setItem("webqa-theme", next);
+  }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const saved = localStorage.getItem("webqa-theme") as Theme | null;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initial: Theme = saved ? saved : prefersDark ? "dark" : "light";
+    setThemeState(initial);
+    applyTheme(initial);
+    setMounted(true);
+  }, [applyTheme]);
+
+  const setTheme = useCallback(
+    (next: Theme) => {
+      setThemeState(next);
+      if (mounted) applyTheme(next);
+    },
+    [applyTheme, mounted]
+  );
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === "light" ? "dark" : "light");
+  }, [setTheme, theme]);
+
+  // Keyboard shortcut: D to toggle theme
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) return false;
+      return (
+        target.isContentEditable ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT"
+      );
+    }
+
     function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || event.repeat) {
-        return
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      if (event.key.toLowerCase() !== "d") {
-        return
-      }
-
-      if (isTypingTarget(event.target)) {
-        return
-      }
-
-      setTheme(resolvedTheme === "dark" ? "light" : "dark")
+      if (event.defaultPrevented || event.repeat) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key.toLowerCase() !== "d") return;
+      if (isTypingTarget(event.target)) return;
+      toggleTheme();
     }
 
-    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleTheme]);
 
-    return () => {
-      window.removeEventListener("keydown", onKeyDown)
-    }
-  }, [resolvedTheme, setTheme])
-
-  return null
+  return (
+    <ThemeContext.Provider
+      value={{ theme, resolvedTheme: theme, setTheme, toggleTheme }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
-export { ThemeProvider }
+export const useTheme = () => useContext(ThemeContext);
