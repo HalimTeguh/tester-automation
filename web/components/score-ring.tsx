@@ -18,9 +18,16 @@ export function ScoreRing({ score, size = 96, stroke = 8, className, label }: Sc
   const color =
     score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-red-500";
 
+  const numberSizeClass = size >= 120 ? "text-4xl" : size >= 88 ? "text-2xl" : "text-xl";
+
   return (
     <div className={cn("relative inline-flex flex-col items-center", className)}>
-      <svg width={size} height={size} className="-rotate-90">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="-rotate-90"
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -43,10 +50,21 @@ export function ScoreRing({ score, size = 96, stroke = 8, className, label }: Sc
           className={cn("transition-all duration-1000 ease-out", color)}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold tabular-nums">{score}</span>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span
+          className={cn(
+            "font-bold tabular-nums leading-none drop-shadow-sm",
+            numberSizeClass
+          )}
+        >
+          {score}
+        </span>
       </div>
-      {label && <span className="mt-2 text-center text-sm font-medium text-muted-foreground">{label}</span>}
+      {label && (
+        <span className="mt-2 w-full text-center text-sm font-medium text-muted-foreground">
+          {label}
+        </span>
+      )}
     </div>
   );
 }

@@ -61,10 +61,10 @@ export default function ReportPage() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-4">
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 flex flex-col justify-center">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <ScoreRing score={mockReport.overallScore} size={140} stroke={10} />
-            <p className="mt-3 text-sm font-medium text-muted-foreground">Skor Keseluruhan</p>
+            <p className="mt-3 text-base font-medium">Skor Keseluruhan</p>
             <Badge
               variant={mockReport.overallScore >= 80 ? "default" : "secondary"}
               className="mt-2"
@@ -74,8 +74,8 @@ export default function ReportPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3">
-          <CardContent className="grid gap-4 py-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="lg:col-span-3 flex flex-col justify-center">
+          <CardContent className="grid h-full items-center gap-4 py-6 sm:grid-cols-2 lg:grid-cols-4">
             {mockReport.results.map((result) => (
               <div key={result.category} className="flex flex-col items-center">
                 <ScoreRing
