@@ -21,6 +21,10 @@ export default function HomePage() {
   const router = useRouter();
 
   const handleStart = (url: string, presetId: string) => {
+    if (presetId === "load-test") {
+      router.push(`/load-test?url=${encodeURIComponent(url)}`);
+      return;
+    }
     router.push(`/run/demo?url=${encodeURIComponent(url)}&preset=${presetId}`);
   };
 

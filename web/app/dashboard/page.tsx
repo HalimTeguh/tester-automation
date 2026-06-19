@@ -74,12 +74,20 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {mockHistory.map((run) => (
-              <Link
-                key={run.id}
-                href={run.status === "completed" ? `/report/${run.id}` : `/run/${run.id}`}
-                className="flex items-center justify-between rounded-xl border border-border/60 p-3 transition-colors hover:bg-accent"
-              >
+            {mockHistory.map((run) => {
+              const isLoadTest = run.preset === "load-test";
+              const href =
+                run.status !== "completed"
+                  ? `/run/${run.id}`
+                  : isLoadTest
+                    ? `/load-test/report/${run.id}`
+                    : `/report/${run.id}`;
+              return (
+                <Link
+                  key={run.id}
+                  href={href}
+                  className="flex items-center justify-between rounded-xl border border-border/60 p-3 transition-colors hover:bg-accent"
+                >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{run.url}</p>
                   <p className="text-xs text-muted-foreground">
@@ -95,7 +103,8 @@ export default function DashboardPage() {
                   )}
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 

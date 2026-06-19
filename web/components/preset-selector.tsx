@@ -2,7 +2,14 @@
 
 import { presets } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { Rocket, Sparkles, Search, ShieldCheck, Zap } from "lucide-react";
+import {
+  Rocket,
+  Sparkles,
+  Search,
+  ShieldCheck,
+  Zap,
+  Activity,
+} from "lucide-react";
 
 const icons: Record<string, React.ReactNode> = {
   "post-deploy": <Rocket className="h-4 w-4" />,
@@ -10,6 +17,7 @@ const icons: Record<string, React.ReactNode> = {
   seo: <Search className="h-4 w-4" />,
   security: <ShieldCheck className="h-4 w-4" />,
   quick: <Zap className="h-4 w-4" />,
+  "load-test": <Activity className="h-4 w-4" />,
 };
 
 interface PresetSelectorProps {

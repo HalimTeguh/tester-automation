@@ -63,6 +63,12 @@ export const presets = [
     description: "Fungsionalitas + SEO",
     categories: ["functionality", "seo"] as TestCategory[],
   },
+  {
+    id: "load-test",
+    label: "Uji Beban",
+    description: "Stress test website target",
+    categories: ["performance"] as TestCategory[],
+  },
 ];
 
 export const mockReport: TestRun = {
@@ -193,6 +199,16 @@ export const mockHistory: TestRun[] = [
     overallScore: 0,
     preset: "seo",
     startedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    results: [],
+  },
+  {
+    id: "run-demo-004",
+    url: "https://api.startupsaya.id",
+    status: "completed",
+    overallScore: 0,
+    preset: "load-test",
+    startedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+    completedAt: new Date(Date.now() - 1000 * 60 * 60 * 12 + 1000 * 60 * 3).toISOString(),
     results: [],
   },
 ];
