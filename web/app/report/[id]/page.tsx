@@ -14,10 +14,17 @@ import {
   Share2,
   Download,
   MessageSquare,
-  CheckCircle2,
   AlertTriangle,
   Info,
+  XCircle,
 } from "lucide-react";
+
+const categoryLabel: Record<string, string> = {
+  functionality: "Fungsionalitas",
+  performance: "Performa",
+  seo: "SEO",
+  security: "Keamanan",
+};
 
 export default function ReportPage() {
   const searchParams = useSearchParams();
@@ -71,7 +78,12 @@ export default function ReportPage() {
           <CardContent className="grid gap-4 py-6 sm:grid-cols-2 lg:grid-cols-4">
             {mockReport.results.map((result) => (
               <div key={result.category} className="flex flex-col items-center">
-                <ScoreRing score={result.score} size={88} stroke={7} label={result.category} />
+                <ScoreRing
+                  score={result.score}
+                  size={88}
+                  stroke={7}
+                  label={categoryLabel[result.category]}
+                />
               </div>
             ))}
           </CardContent>
@@ -79,26 +91,20 @@ export default function ReportPage() {
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card className="flex items-center gap-3 border-destructive/20 bg-destructive/5 p-4">
-          <XIcon className="h-5 w-5 text-destructive" />
-          <div>
-            <p className="text-lg font-bold">{critical}</p>
-            <p className="text-xs text-muted-foreground">Critical</p>
-          </div>
+        <Card className="flex flex-col items-center justify-center border-destructive/20 bg-destructive/5 p-5 text-center">
+          <XCircle className="h-6 w-6 text-destructive" />
+          <p className="mt-2 text-2xl font-bold">{critical}</p>
+          <p className="text-sm text-muted-foreground">Critical</p>
         </Card>
-        <Card className="flex items-center gap-3 border-amber-500/20 bg-amber-500/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-amber-500" />
-          <div>
-            <p className="text-lg font-bold">{warning}</p>
-            <p className="text-xs text-muted-foreground">Warning</p>
-          </div>
+        <Card className="flex flex-col items-center justify-center border-amber-500/20 bg-amber-500/5 p-5 text-center">
+          <AlertTriangle className="h-6 w-6 text-amber-500" />
+          <p className="mt-2 text-2xl font-bold">{warning}</p>
+          <p className="text-sm text-muted-foreground">Warning</p>
         </Card>
-        <Card className="flex items-center gap-3 border-blue-500/20 bg-blue-500/5 p-4">
-          <Info className="h-5 w-5 text-blue-500" />
-          <div>
-            <p className="text-lg font-bold">{info}</p>
-            <p className="text-xs text-muted-foreground">Info</p>
-          </div>
+        <Card className="flex flex-col items-center justify-center border-blue-500/20 bg-blue-500/5 p-5 text-center">
+          <Info className="h-6 w-6 text-blue-500" />
+          <p className="mt-2 text-2xl font-bold">{info}</p>
+          <p className="text-sm text-muted-foreground">Info</p>
         </Card>
       </div>
 
@@ -138,24 +144,5 @@ export default function ReportPage() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="m15 9-6 6" />
-      <path d="m9 9 6 6" />
-    </svg>
   );
 }

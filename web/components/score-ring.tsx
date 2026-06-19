@@ -46,7 +46,7 @@ export function ScoreRing({ score, size = 96, stroke = 8, className, label }: Sc
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-bold tabular-nums">{score}</span>
       </div>
-      {label && <span className="mt-1 text-xs font-medium text-muted-foreground">{label}</span>}
+      {label && <span className="mt-2 text-center text-sm font-medium text-muted-foreground">{label}</span>}
     </div>
   );
 }
