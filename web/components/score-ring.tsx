@@ -84,9 +84,12 @@ export function ScoreRing({ score, size = 96, stroke = 8, className, label, summ
           )}
         </div>
         {summary && (
-          <TooltipContent side="bottom" className="max-w-xs text-center">
+          <TooltipContent
+            side="bottom"
+            className="max-w-xs border border-border bg-card p-3 text-center text-card-foreground shadow-lg"
+          >
             <p className="font-semibold">{label}</p>
-            <p className="mt-1 font-normal">{summary}</p>
+            <p className="mt-1 text-xs font-normal text-muted-foreground">{summary}</p>
           </TooltipContent>
         )}
       </Tooltip>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScoreRing } from "@/components/score-ring";
 import { IssueList } from "@/components/issue-list";
-import { mockReport } from "@/lib/mock-data";
+import { mockReport, Issue } from "@/lib/mock-data";
 import {
   ArrowLeft,
   Share2,
@@ -17,6 +18,8 @@ import {
   AlertTriangle,
   Info,
   XCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 
 const categoryLabel: Record<string, string> = {
@@ -24,6 +27,12 @@ const categoryLabel: Record<string, string> = {
   performance: "Performa",
   seo: "SEO",
   security: "Keamanan",
+};
+
+const severityLabel: Record<string, string> = {
+  critical: "Critical",
+  warning: "Warning",
+  info: "Info",
 };
 
 function getCategorySummary(category: string, score: number, issueCount: number): string {
@@ -37,6 +46,15 @@ function getCategorySummary(category: string, score: number, issueCount: number)
   return `${label} memerlukan perhatian serius. Terdapat ${issueCount} temuan signifikan yang berpotensi berdampak buruk pada pengguna.`;
 }
 
+function buildAllIssuesPrompt(url: string, issues: Issue[]): string {
+  const lines = issues.map((issue, index) => {
+    const codeBlock = issue.code ? `\nContoh kode:\n\`\`\`\n${issue.code}\n\`\`\`` : "";
+    return `${index + 1}. ${issue.title} (${categoryLabel[issue.category]}, ${severityLabel[issue.severity]})\n   Deskripsi: ${issue.description}\n   Dampak: ${issue.impact}\n   Cara perbaiki: ${issue.fix}${codeBlock}`;
+  });
+
+  return `Saya menemukan ${issues.length} issue pada website ${url} setelah pemeriksaan WebQA:\n\n${lines.join("\n\n")}\n\nTolong jelaskan apa artinya, urutkan perbaikan dari yang paling penting, dan berikan contoh kode/lebih lengkap jika memungkinkan.`;
+}
+
 export default function ReportPage() {
   const searchParams = useSearchParams();
   const url = searchParams.get("url") || mockReport.url;
@@ -44,6 +62,18 @@ export default function ReportPage() {
   const critical = allIssues.filter((i) => i.severity === "critical").length;
   const warning = allIssues.filter((i) => i.severity === "warning").length;
   const info = allIssues.filter((i) => i.severity === "info").length;
+
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  async function copyAllPrompts() {
+    try {
+      await navigator.clipboard.writeText(buildAllIssuesPrompt(url, allIssues));
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 2000);
+    } catch {
+      setCopiedAll(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -120,19 +150,30 @@ export default function ReportPage() {
         </Card>
       </div>
 
-      <section className="mt-8">
-        <h2 className="text-lg font-bold tracking-tight">Ringkasan per kategori</h2>
-        <p className="text-sm text-muted-foreground">
-          Arahkan kursor ke graph skor masing-masing kategori untuk melihat penjelasan singkat.
-        </p>
-      </section>
-
-      <Tabs defaultValue="issues" className="mt-6">
+      <Tabs defaultValue="issues" className="mt-8">
         <TabsList className="bg-muted">
           <TabsTrigger value="issues">Daftar Issue</TabsTrigger>
           <TabsTrigger value="ai">Tanya AI</TabsTrigger>
         </TabsList>
         <TabsContent value="issues" className="mt-4">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {allIssues.length} issue ditemukan • Hover graph skor untuk ringkasan kategori
+            </p>
+            <Button variant="outline" size="sm" onClick={copyAllPrompts}>
+              {copiedAll ? (
+                <>
+                  <Check className="mr-1.5 h-4 w-4" />
+                  Tersalin
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-1.5 h-4 w-4" />
+                  Salin Prompt Semua Issue
+                </>
+              )}
+            </Button>
+          </div>
           <IssueList issues={allIssues} url={url} />
         </TabsContent>
         <TabsContent value="ai" className="mt-4">
