@@ -17,6 +17,10 @@ import {
   AlertTriangle,
   Info,
   XCircle,
+  MousePointerClick,
+  Gauge,
+  Search,
+  ShieldCheck,
 } from "lucide-react";
 
 const categoryLabel: Record<string, string> = {
@@ -25,6 +29,24 @@ const categoryLabel: Record<string, string> = {
   seo: "SEO",
   security: "Keamanan",
 };
+
+const categoryIcons: Record<string, React.ReactNode> = {
+  functionality: <MousePointerClick className="h-5 w-5" />,
+  performance: <Gauge className="h-5 w-5" />,
+  seo: <Search className="h-5 w-5" />,
+  security: <ShieldCheck className="h-5 w-5" />,
+};
+
+function getCategorySummary(category: string, score: number, issueCount: number): string {
+  const label = categoryLabel[category];
+  if (score >= 80) {
+    return `${label} berada dalam kondisi baik. Hanya ada temuan kecil yang perlu ditindaklanjuti.`;
+  }
+  if (score >= 60) {
+    return `${label} cukup baik, tetapi terdapat ${issueCount} temuan yang sebaiknya diperbaiki untuk meningkatkan kualitas website.`;
+  }
+  return `${label} memerlukan perhatian serius. Terdapat ${issueCount} temuan signifikan yang berpotensi berdampak buruk pada pengguna.`;
+}
 
 export default function ReportPage() {
   const searchParams = useSearchParams();
@@ -107,6 +129,33 @@ export default function ReportPage() {
           <p className="text-sm text-muted-foreground">Info</p>
         </Card>
       </div>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-bold tracking-tight">Ringkasan per kategori</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {mockReport.results.map((result) => {
+            const issueCount = result.issues.length;
+            return (
+              <Card key={result.category} className="border-border/60 bg-card/50">
+                <CardContent className="flex gap-4 p-5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    {categoryIcons[result.category]}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{categoryLabel[result.category]}</h3>
+                      <Badge variant="secondary">{result.score}/100</Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {getCategorySummary(result.category, result.score, issueCount)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
 
       <Tabs defaultValue="issues" className="mt-8">
         <TabsList className="bg-muted">
