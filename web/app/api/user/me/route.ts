@@ -8,7 +8,7 @@ export async function GET() {
   const token = cookieStore.get(COOKIE_NAME)?.value;
 
   if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(null);
   }
 
   const payload = await verifyToken(token);
