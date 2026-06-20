@@ -47,6 +47,8 @@ interface ApiTestRun {
   preset: string;
   status: string;
   overallScore: number | null;
+  aiSummary: string | null;
+  aiFixPlan: string | null;
   testResults: ApiTestResult[];
 }
 
@@ -230,11 +232,49 @@ export default function ReportPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="issues" className="mt-8">
+      <Tabs defaultValue="ai" className="mt-8">
         <TabsList className="bg-muted">
+          <TabsTrigger value="ai">Ringkasan AI</TabsTrigger>
           <TabsTrigger value="issues">Daftar Issue</TabsTrigger>
-          <TabsTrigger value="ai">Tanya AI</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ai" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                Analisis AI
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              {run.aiSummary ? (
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  {run.aiSummary.split("\n").map((p, i) =>
+                    p.trim() ? <p key={i}>{p}</p> : null
+                  )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  Ringkasan AI belum tersedia. Pastikan API key opencode.ai sudah dikonfigurasi di .env.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {run.aiFixPlan && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Rencana Perbaikan Prioritas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="whitespace-pre-line text-sm leading-relaxed">
+                  {run.aiFixPlan}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         <TabsContent value="issues" className="mt-4">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
@@ -261,32 +301,6 @@ export default function ReportPage() {
             }))}
             url={url}
           />
-        </TabsContent>
-        <TabsContent value="ai" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                Asisten Tester
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-xl bg-muted p-4 text-sm">
-                <p className="font-medium">Halo! Saya bisa menjelaskan hasil tes ini.</p>
-                <p className="mt-1 text-muted-foreground">
-                  Contoh: &quot;Mengapa LCP saya tinggi?&quot; atau &quot;Bagaimana cara memperbaiki CSP header?&quot;
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Tanyakan sesuatu..."
-                  className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                <Button size="sm">Kirim</Button>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

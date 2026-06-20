@@ -168,6 +168,7 @@ model User {
   id              String          @id @default(cuid())
   email           String          @unique
   name            String
+  password        String
   role            String          @default("user")
   isActive        Boolean         @default(true)
   emailVerified   Boolean         @default(false)
@@ -199,6 +200,8 @@ model TestRun {
   preset        String
   status        String        @default("pending")
   overallScore  Int?
+  aiSummary     String?
+  aiFixPlan     String?
   startedAt     DateTime      @default(now())
   completedAt   DateTime?
   config        String?

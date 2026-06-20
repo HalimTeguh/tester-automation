@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { AuthProvider } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -36,13 +37,15 @@ export default function RootLayout({
       className={cn("antialiased", plusJakarta.variable, jetbrainsMono.variable)}
     >
       <body className="min-h-screen font-sans flex flex-col">
-        <ThemeProvider>
-          <TooltipProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </TooltipProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </TooltipProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

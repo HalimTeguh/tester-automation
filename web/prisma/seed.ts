@@ -1,6 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+async function hash(password: string) {
+  return bcrypt.hash(password, 10);
+}
 
 async function main() {
   // Hapus data lama agar seed idempotent
@@ -280,6 +285,7 @@ async function main() {
     data: {
       email: "admin@webqa.local",
       name: "Admin WebQA",
+      password: await hash("admin123"),
       role: "admin",
       isActive: true,
     },
@@ -289,6 +295,7 @@ async function main() {
     data: {
       email: "demo@webqa.local",
       name: "Demo User",
+      password: await hash("demo123"),
       role: "user",
       isActive: true,
     },

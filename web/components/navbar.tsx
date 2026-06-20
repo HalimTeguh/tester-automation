@@ -1,21 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ShieldCheck, Menu, Moon, Sun, LayoutDashboard } from "lucide-react";
+import { ShieldCheck, Menu, Moon, Sun, LayoutDashboard, LogOut, User } from "lucide-react";
 
 const navLinks = [
   { href: "/", label: "Beranda" },
   { href: "/tentang", label: "Tentang" },
-  { href: "/dashboard", label: "Dashboard" },
   { href: "/keamanan", label: "Keamanan" },
-  { href: "/settings", label: "Pengaturan" },
 ];
 
 export function Navbar() {
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { user, logout, loading } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -50,12 +50,37 @@ export function Navbar() {
             )}
           </Button>
 
-          <Button asChild className="hidden sm:flex" size="sm">
-            <Link href="/dashboard">
-              <LayoutDashboard className="mr-1.5 h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
+          {!loading && user ? (
+            <>
+              <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="mr-1.5 h-4 w-4" />
+                  Dashboard
+                </Link>
+              </Button>
+              {user.role === "admin" && (
+                <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
+                  <Link href="/admin">Admin</Link>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden sm:flex"
+                onClick={() => logout()}
+              >
+                <LogOut className="mr-1.5 h-4 w-4" />
+                Keluar
+              </Button>
+            </>
+          ) : (
+            <Button asChild size="sm" className="hidden sm:flex">
+              <Link href="/login">
+                <User className="mr-1.5 h-4 w-4" />
+                Masuk
+              </Link>
+            </Button>
+          )}
 
           <Sheet>
             <SheetTrigger asChild className="md:hidden">
@@ -70,6 +95,26 @@ export function Navbar() {
                     <Link href={link.href}>{link.label}</Link>
                   </Button>
                 ))}
+                {user ? (
+                  <>
+                    <Button variant="ghost" asChild className="justify-start">
+                      <Link href="/dashboard">Dashboard</Link>
+                    </Button>
+                    {user.role === "admin" && (
+                      <Button variant="ghost" asChild className="justify-start">
+                        <Link href="/admin">Admin</Link>
+                      </Button>
+                    )}
+                    <Button variant="ghost" className="justify-start" onClick={() => logout()}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Keluar
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="ghost" asChild className="justify-start">
+                    <Link href="/login">Masuk</Link>
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>

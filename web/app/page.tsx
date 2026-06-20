@@ -45,12 +45,23 @@ export default function HomePage() {
       .catch(() => setLoading(false));
   }, []);
 
-  const handleStart = (url: string, presetId: string) => {
+  const handleStart = async (url: string, presetId: string) => {
     if (presetId === "load-test") {
       router.push(`/load-test?url=${encodeURIComponent(url)}`);
       return;
     }
-    router.push(`/run/demo?url=${encodeURIComponent(url)}&preset=${presetId}`);
+    try {
+      const res = await fetch("/api/test-runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, preset: presetId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal membuat tes");
+      router.push(`/run/${data.id}`);
+    } catch {
+      router.push(`/run/demo?url=${encodeURIComponent(url)}&preset=${presetId}`);
+    }
   };
 
   if (loading) {

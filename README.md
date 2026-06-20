@@ -18,6 +18,21 @@ cd web
 npm install
 ```
 
+### Environment
+
+Buat file `.env` dari contoh:
+
+```bash
+cp .env.example .env
+```
+
+Isi minimal:
+
+```env
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="webqa-local-secret-change-in-production"
+```
+
 ### Database & Seed
 
 Proyek ini menggunakan Prisma + SQLite untuk local development. Schema dirancang kompatibel dengan PostgreSQL/Supabase untuk production.
@@ -86,4 +101,4 @@ npm start
 
 ## Status
 
-UI/UX Phase 1 selesai. Backend dasar (database + API) sudah tersedia dan terhubung ke halaman home, tentang, keamanan, dashboard, serta laporan. Runner sebenarnya (Playwright/Lighthouse/ZAP) akan diintegrasikan di Phase 2.
+UI/UX Phase 1 selesai. Backend dasar (database + API) sudah tersedia dan terhubung ke halaman home, tentang, keamanan, dashboard, serta laporan. Autentikasi JWT, halaman admin/settings, dan runner nyata (Playwright + Lighthouse dengan fallback HTTP) sudah diimplementasikan. Runner juga mengirim temuan ke AI (opencode.ai / OpenAI-compatible) untuk menghasilkan ringkasan eksekutif dan rencana perbaikan. Runner masih berjalan secara sinkron di API route — untuk skala besar disarankan memisahkan ke worker/queue.

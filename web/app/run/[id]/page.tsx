@@ -1,178 +1,138 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { TestProgressPanel } from "@/components/test-progress-panel";
-import { Card, CardContent } from "@/components/ui/card";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { presets, TestCategory, TestResult } from "@/lib/mock-data";
-import { Loader2, ArrowLeft, XCircle, Users, Clock } from "lucide-react";
-import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Activity,
+  Globe,
+  ShieldCheck,
+} from "lucide-react";
+
+const steps = [
+  "Memuat halaman target",
+  "Memeriksa fungsionalitas",
+  "Mengukur performa",
+  "Mengecek SEO",
+  "Memeriksa header keamanan",
+  "Menyusun laporan",
+];
 
 export default function RunPage() {
-  const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const url = searchParams.get("url") || "https://example.com";
-  const presetId = searchParams.get("preset") || "pre-launch";
-
-  const preset = presets.find((p) => p.id === presetId) || presets[1];
-  const [results, setResults] = useState<TestResult[]>(
-    preset.categories.map((category) => ({
-      category,
-      score: 0,
-      status: "pending",
-      progress: 0,
-      issues: [],
-    }))
-  );
-  const [status, setStatus] = useState<"queue" | "running" | "completed" | "failed">("queue");
-  const [logs, setLogs] = useState<string[]>(["Menerima permintaan...", "Memverifikasi slot scanner..."]);
-
-  // Queue simulation
-  const [queuePosition, setQueuePosition] = useState(() => Math.floor(Math.random() * 12) + 6);
-  const [queueWaitSec, setQueueWaitSec] = useState(queuePosition * 4);
+  const { id } = useParams<{ id: string }>();
+  const [run, setRun] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
-    if (status !== "queue") return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/test-runs/${id}`);
+        const data = await res.json();
+        setRun(data);
 
-    const interval = setInterval(() => {
-      setQueuePosition((pos) => {
-        if (pos <= 1) {
+        if (data.status === "running") {
+          setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
+        } else if (data.status === "completed") {
+          setStepIndex(steps.length - 1);
           clearInterval(interval);
-          setStatus("running");
-          setLogs((l) => [...l, "Slot tersedia. Memulai scan..."]);
-          return 0;
+          setTimeout(() => router.push(`/report/${id}`), 1200);
+        } else if (data.status === "failed") {
+          clearInterval(interval);
+          setError("Pemeriksaan gagal. Silakan coba lagi.");
         }
-        const next = Math.max(0, pos - Math.floor(Math.random() * 3) - 1);
-        setQueueWaitSec(next * 4 + Math.floor(Math.random() * 5));
-        setLogs((l) => [...l, `Antrean: ${next} user di depan — estimasi ${next * 4}s`]);
-        return next;
-      });
-    }, 1200);
+      } catch {
+        setError("Gagal menghubungi server.");
+      }
+    }, 1500);
 
     return () => clearInterval(interval);
-  }, [status]);
+  }, [id, router]);
 
   useEffect(() => {
-    if (status !== "running") return;
+    // Trigger runner once
+    fetch(`/api/test-runs/${id}/run`, { method: "POST" }).catch(() => {
+      setError("Gagal memulai runner.");
+    });
+  }, [id]);
 
-    const categories = preset.categories;
-    let current = 0;
-
-    const interval = setInterval(() => {
-      setResults((prev) => {
-        const next = [...prev];
-        const active = next[current];
-        if (!active) return prev;
-
-        if (active.status === "pending") {
-          active.status = "running";
-          active.progress = 15;
-          setLogs((l) => [...l, `Memeriksa ${active.category}...`]);
-        } else if (active.progress < 90) {
-          active.progress += 20;
-        } else {
-          active.progress = 100;
-          active.status = "completed";
-          active.score = Math.floor(Math.random() * 30) + 65;
-          current += 1;
-          if (current >= categories.length) {
-            clearInterval(interval);
-            setStatus("completed");
-            setLogs((l) => [...l, "Tes selesai. Memuat laporan..."]);
-            setTimeout(() => {
-              router.push(`/report/demo?url=${encodeURIComponent(url)}&preset=${presetId}`);
-            }, 1500);
-          }
-        }
-        return next;
-      });
-    }, 800);
-
-    return () => clearInterval(interval);
-  }, [status, preset, router, url, presetId]);
-
-  const statusConfig = {
-    queue: {
-      icon: <Users className="h-5 w-5 animate-pulse text-amber-500" />,
-      title: "Menunggu antrean",
-      subtitle: `Posisi antrean: ${queuePosition} user di depan — estimasi ~${queueWaitSec} detik`,
-    },
-    running: {
-      icon: <Loader2 className="h-5 w-5 animate-spin text-primary" />,
-      title: "Tes sedang berjalan",
-      subtitle: "Estimasi selesai: ~2 menit",
-    },
-    completed: {
-      icon: <div className="h-5 w-5 rounded-full bg-emerald-500" />,
-      title: "Tes selesai",
-      subtitle: "Mengalihkan ke halaman laporan...",
-    },
-    failed: {
-      icon: <XCircle className="h-5 w-5 text-destructive" />,
-      title: "Tes gagal",
-      subtitle: "Silakan coba lagi",
-    },
-  };
-
-  const currentStatus = statusConfig[status];
+  const progress = run
+    ? run.status === "completed"
+      ? 100
+      : run.status === "failed"
+      ? 100
+      : Math.round(((stepIndex + 1) / steps.length) * 100)
+    : 10;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Memeriksa Website</h1>
-          <p className="text-sm text-muted-foreground">{url}</p>
-        </div>
-      </div>
-
-      <div className="mt-6 flex items-center gap-3 rounded-xl border border-border/60 bg-accent/30 p-4">
-        {currentStatus.icon}
-        <div className="flex-1">
-          <p className="text-sm font-semibold">{currentStatus.title}</p>
-          <p className="text-xs text-muted-foreground">{currentStatus.subtitle}</p>
-        </div>
-      </div>
-
-      {status === "queue" && (
-        <Card className="mt-6 border-border/80 bg-card">
-          <CardContent className="space-y-4 p-5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                Estimasi tunggu
-              </span>
-              <span className="font-semibold">~{queueWaitSec} detik</span>
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <Card className="overflow-hidden">
+        <CardContent className="p-8">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              {error ? (
+                <XCircle className="h-8 w-8" />
+              ) : run?.status === "completed" ? (
+                <CheckCircle2 className="h-8 w-8" />
+              ) : (
+                <Loader2 className="h-8 w-8 animate-spin" />
+              )}
             </div>
-            <Progress value={Math.max(0, 100 - queuePosition * 5)} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              Scanner sedang sibuk. Kamu tetap di antrean agar server tidak overload saat traffic tinggi.
+
+            <h1 className="text-2xl font-bold tracking-tight">
+              {error
+                ? "Pemeriksaan Gagal"
+                : run?.status === "completed"
+                ? "Pemeriksaan Selesai"
+                : "Sedang Memeriksa Website"}
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              {run?.url || "Memuat target..."}
             </p>
-          </CardContent>
-        </Card>
-      )}
 
-      <div className="mt-6">
-        <TestProgressPanel results={results} />
-      </div>
+            <div className="mt-6 w-full">
+              <Progress value={progress} className="h-2" />
+              <p className="mt-2 text-sm font-medium text-primary">
+                {steps[stepIndex]}
+              </p>
+            </div>
 
-      <Card className="mt-6 border-border/80 bg-card">
-        <CardContent className="p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Live Log</p>
-          <div className="max-h-48 overflow-y-auto rounded-lg bg-muted p-3 font-mono text-xs">
-            {logs.map((log, i) => (
-              <div key={i} className="py-0.5">
-                <span className="text-muted-foreground">[{i + 1}]</span> {log}
+            <div className="mt-8 grid w-full grid-cols-3 gap-3">
+              <Badge variant="outline" className="justify-center gap-1 py-2">
+                <Activity className="h-3.5 w-3.5" />
+                {run?.status === "running" ? "Aktif" : run?.status || "..."}
+              </Badge>
+              <Badge variant="outline" className="justify-center gap-1 py-2">
+                <Globe className="h-3.5 w-3.5" />
+                {run?.preset || "default"}
+              </Badge>
+              <Badge variant="outline" className="justify-center gap-1 py-2">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {run?.overallScore != null ? `${run.overallScore}/100` : "-"}
+              </Badge>
+            </div>
+
+            {error && (
+              <div className="mt-6 w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                {error}
               </div>
-            ))}
-            {status === "running" && <div className="py-0.5 text-muted-foreground">...</div>}
+            )}
+
+            {run?.status === "completed" && (
+              <Button
+                className="mt-8 w-full"
+                onClick={() => router.push(`/report/${id}`)}
+              >
+                Lihat Laporan
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/auth";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  if (!body) {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
+  if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+
+  const data: any = {};
+  if (body.name !== undefined) data.name = body.name;
+  if (body.role !== undefined) data.role = body.role;
+  if (body.isActive !== undefined) data.isActive = body.isActive;
+  if (body.password) data.password = await hashPassword(body.password);
 
   const user = await prisma.user.update({
     where: { id },
-    data: {
-      name: body.name,
-      role: body.role,
-      isActive: body.isActive,
-    },
+    data,
+    select: { id: true, email: true, name: true, role: true, isActive: true },
   });
 
   return NextResponse.json(user);
@@ -22,6 +24,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await prisma.user.update({ where: { id }, data: { isActive: false } });
-  return NextResponse.json({ message: "User deactivated" });
+  await prisma.user.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
 }
