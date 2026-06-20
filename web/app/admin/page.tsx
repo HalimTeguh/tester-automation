@@ -517,6 +517,9 @@ function WebhooksTab() {
 function UsersTab() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user", isActive: true });
+  const [saving, setSaving] = useState(false);
 
   const load = () => {
     fetch("/api/users")
@@ -533,47 +536,130 @@ function UsersTab() {
     else toast.error("Gagal memperbarui pengguna");
   };
 
+  const create = async () => {
+    if (!form.name || !form.email || !form.password) {
+      toast.error("Nama, email, dan password wajib diisi");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setSaving(false);
+    if (res.ok) {
+      toast.success("Pengguna ditambahkan");
+      setForm({ name: "", email: "", password: "", role: "user", isActive: true });
+      setShowForm(false);
+      load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "Gagal menambah pengguna");
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus pengguna ini?")) return;
+    const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Pengguna dihapus"); load(); }
+    else toast.error("Gagal menghapus pengguna");
+  };
+
   if (loading) return <Loader2 className="h-6 w-6 animate-spin" />;
 
   return (
-    <Card>
-      <CardHeader><CardTitle className="text-base">Daftar Pengguna</CardTitle></CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nama</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell>{u.name}</TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Daftar Pengguna</CardTitle>
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {showForm ? "Batal" : "Tambah Pengguna"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showForm && (
+            <div className="mb-6 rounded-lg border border-border p-4">
+              <h3 className="mb-3 text-sm font-semibold">Pengguna Baru</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label="Nama" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+                <Field label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+                <Field label="Password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Role</label>
                   <select
-                    className="rounded border border-input bg-background px-2 py-1 text-sm"
-                    value={u.role}
-                    onChange={(e) => update(u.id, { role: e.target.value })}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
                   >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
                   </select>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={u.isActive ? "default" : "secondary"} className="cursor-pointer" onClick={() => update(u.id, { isActive: !u.isActive })}>
-                    {u.isActive ? "Aktif" : "Nonaktif"}
-                  </Badge>
-                </TableCell>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  />
+                  Aktif
+                </label>
+                <Button size="sm" onClick={create} disabled={saving}>
+                  {saving ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium">{u.name}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>
+                    <select
+                      className="rounded border border-input bg-background px-2 py-1 text-sm"
+                      value={u.role}
+                      onChange={(e) => update(u.id, { role: e.target.value })}
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={u.isActive ? "default" : "secondary"}
+                      className="cursor-pointer"
+                      onClick={() => update(u.id, { isActive: !u.isActive })}
+                    >
+                      {u.isActive ? "Aktif" : "Nonaktif"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => remove(u.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
