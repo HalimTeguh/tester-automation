@@ -24,10 +24,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(name, email, password);
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Registrasi gagal");
-    } finally {
       setLoading(false);
     }
   }

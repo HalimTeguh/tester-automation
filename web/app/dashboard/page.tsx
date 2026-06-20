@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,7 @@ function formatDate(iso: string) {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [runs, setRuns] = useState<TestRun[]>([]);
   const [loadTests, setLoadTests] = useState<LoadTest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,10 +147,12 @@ export default function DashboardPage() {
             <ListChecks className="mr-2 h-4 w-4" />
             Pemeriksaan Saya
           </TabsTrigger>
-          <TabsTrigger value="queue">
-            <Users className="mr-2 h-4 w-4" />
-            Antrian Semua User
-          </TabsTrigger>
+          {user?.role === "admin" && (
+            <TabsTrigger value="queue">
+              <Users className="mr-2 h-4 w-4" />
+              Antrian Semua User
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="mine">
@@ -212,9 +216,11 @@ export default function DashboardPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="queue">
-          <TestQueue runs={runs} loading={loading} />
-        </TabsContent>
+        {user?.role === "admin" && (
+          <TabsContent value="queue">
+            <TestQueue runs={runs} loading={loading} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

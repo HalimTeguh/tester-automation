@@ -24,13 +24,12 @@ export default function LoginPage() {
     try {
       const user = await login(email, password);
       if (user.role === "admin") {
-        router.push("/admin");
+        window.location.href = "/admin";
       } else {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Login gagal");
-    } finally {
       setLoading(false);
     }
   }

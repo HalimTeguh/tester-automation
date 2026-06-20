@@ -12,6 +12,13 @@ export async function comparePassword(password: string, hashed: string) {
   return bcrypt.compare(password, hashed);
 }
 
+export async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  return verifyToken(token);
+}
+
 export async function requireAdmin() {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;

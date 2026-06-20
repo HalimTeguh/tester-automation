@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const where = user.role === "admin" ? {} : { userId: user.sub };
+
   const tests = await prisma.loadTest.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     include: { user: { select: { id: true, name: true, email: true } } },
   });
