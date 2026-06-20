@@ -3,8 +3,8 @@ import type { NextRequest } from "next/server";
 import { verifyToken, COOKIE_NAME } from "./lib/jwt";
 
 const PUBLIC_ROUTES = ["/", "/tentang", "/keamanan", "/login", "/register"];
-const PUBLIC_API_PREFIXES = ["/api/test-runs", "/api/load-tests"];
-const ADMIN_API_PREFIXES = ["/api/users", "/api/settings", "/api/webhooks/endpoints"];
+const PUBLIC_API_PREFIXES = ["/api/test-runs", "/api/load-tests", "/api/settings/public"];
+const ADMIN_API_PREFIXES = ["/api/users", "/api/settings", "/api/admin", "/api/webhooks"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

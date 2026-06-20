@@ -7,6 +7,7 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { AuthProvider } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({
               <Navbar />
               <main className="flex-1">{children}</main>
               <Footer />
+              <Toaster position="top-right" richColors />
             </TooltipProvider>
           </ThemeProvider>
         </AuthProvider>
