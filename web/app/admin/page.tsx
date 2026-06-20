@@ -21,6 +21,14 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  PlayCircle,
+  Activity,
+  ExternalLink,
+  Search,
 } from "lucide-react";
 
 interface User {
@@ -91,42 +99,316 @@ export default function AdminPage() {
 }
 
 // ---------- Dashboard ----------
+interface AdminTestRun {
+  id: string;
+  url: string;
+  preset: string;
+  status: string;
+  overallScore: number | null;
+  startedAt: string;
+  completedAt: string | null;
+  user: { id: string; name: string; email: string } | null;
+  testResults: { id: string; category: string; score: number | null; status: string }[];
+}
+
+interface AdminLoadTest {
+  id: string;
+  url: string;
+  vus: number;
+  duration: number;
+  status: string;
+  createdAt: string;
+  completedAt: string | null;
+  user: { id: string; name: string; email: string } | null;
+}
+
 function DashboardTab() {
   const [stats, setStats] = useState({ users: 0, activeUsers: 0, tests: 0, avgScore: 0 });
+  const [testRuns, setTestRuns] = useState<AdminTestRun[]>([]);
+  const [loadTests, setLoadTests] = useState<AdminLoadTest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "pending" | "running" | "completed" | "failed">("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     Promise.all([
       fetch("/api/users").then((r) => r.json()),
-      fetch("/api/test-runs").then((r) => r.json()),
+      fetch("/api/admin/test-runs").then((r) => r.json()),
     ])
-      .then(([users, tests]) => {
+      .then(([users, adminData]) => {
         const active = users.filter((u: User) => u.isActive).length;
-        const scores = tests.filter((t: any) => t.overallScore != null).map((t: any) => t.overallScore);
+        const tests: AdminTestRun[] = adminData.testRuns || [];
+        const scores = tests.filter((t) => t.overallScore != null).map((t) => t.overallScore!);
         setStats({
           users: users.length,
           activeUsers: active,
           tests: tests.length,
-          avgScore: scores.length ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0,
+          avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
         });
+        setTestRuns(tests);
+        setLoadTests(adminData.loadTests || []);
+        setLoading(false);
       })
-      .catch(() => toast.error("Gagal memuat statistik"));
+      .catch(() => {
+        toast.error("Gagal memuat statistik");
+        setLoading(false);
+      });
   }, []);
 
+  const filteredTests = testRuns.filter((t) => {
+    const matchStatus = filter === "all" ? true : t.status === filter;
+    const term = search.toLowerCase();
+    const matchSearch =
+      !term ||
+      t.url.toLowerCase().includes(term) ||
+      t.user?.name?.toLowerCase().includes(term) ||
+      t.user?.email?.toLowerCase().includes(term) ||
+      t.preset.toLowerCase().includes(term);
+    return matchStatus && matchSearch;
+  });
+
+  const statusCounts = {
+    all: testRuns.length,
+    pending: testRuns.filter((t) => t.status === "pending").length,
+    running: testRuns.filter((t) => t.status === "running").length,
+    completed: testRuns.filter((t) => t.status === "completed").length,
+    failed: testRuns.filter((t) => t.status === "failed").length,
+  };
+
+  const statusConfig: Record<string, { label: string; icon: React.ElementType; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    pending: { label: "Pending", icon: Clock, variant: "secondary" },
+    running: { label: "Running", icon: PlayCircle, variant: "default" },
+    completed: { label: "Selesai", icon: CheckCircle2, variant: "default" },
+    failed: { label: "Gagal", icon: XCircle, variant: "destructive" },
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard title="Total Pengguna" value={stats.users} />
-      <StatCard title="Pengguna Aktif" value={stats.activeUsers} />
-      <StatCard title="Total Tes" value={stats.tests} />
-      <StatCard title="Skor Rata-rata" value={stats.avgScore} suffix="/100" />
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Total Pengguna" value={stats.users} icon={Users} />
+        <StatCard title="Pengguna Aktif" value={stats.activeUsers} icon={Activity} />
+        <StatCard title="Total Tes" value={stats.tests} icon={LayoutDashboard} />
+        <StatCard title="Skor Rata-rata" value={stats.avgScore} suffix="/100" icon={CheckCircle2} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Activity className="h-4 w-4" />
+            Pemantauan Testing
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {(["all", "pending", "running", "completed", "failed"] as const).map((s) => (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={filter === s ? "default" : "outline"}
+                  onClick={() => setFilter(s)}
+                  className="gap-1.5"
+                >
+                  {s === "all" && <LayoutDashboard className="h-3.5 w-3.5" />}
+                  {s === "pending" && <Clock className="h-3.5 w-3.5" />}
+                  {s === "running" && <PlayCircle className="h-3.5 w-3.5" />}
+                  {s === "completed" && <CheckCircle2 className="h-3.5 w-3.5" />}
+                  {s === "failed" && <XCircle className="h-3.5 w-3.5" />}
+                  {s === "all" ? "Semua" : statusConfig[s]?.label || s}
+                  <span className="ml-1 rounded-full bg-background px-1.5 py-0.5 text-xs font-medium text-foreground">
+                    {statusCounts[s]}
+                  </span>
+                </Button>
+              ))}
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Cari URL, user, preset..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background py-1 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-64"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>URL</TableHead>
+                  <TableHead>Pengguna</TableHead>
+                  <TableHead>Preset</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Skor</TableHead>
+                  <TableHead>Waktu Mulai</TableHead>
+                  <TableHead>Durasi</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTests.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      Tidak ada data testing.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filteredTests.map((t) => {
+                  const cfg = statusConfig[t.status] || { label: t.status, icon: AlertCircle, variant: "outline" };
+                  const StatusIcon = cfg.icon;
+                  const started = new Date(t.startedAt);
+                  const completed = t.completedAt ? new Date(t.completedAt) : null;
+                  const duration = completed ? Math.round((completed.getTime() - started.getTime()) / 1000) : null;
+
+                  return (
+                    <TableRow key={t.id}>
+                      <TableCell className="max-w-[200px] truncate font-medium" title={t.url}>
+                        {t.url}
+                      </TableCell>
+                      <TableCell>
+                        {t.user ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm">{t.user.name}</span>
+                            <span className="text-xs text-muted-foreground">{t.user.email}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Anonim</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{t.preset}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={cfg.variant} className="gap-1">
+                          <StatusIcon className="h-3 w-3" />
+                          {cfg.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {t.overallScore != null ? (
+                          <span className={`font-semibold ${t.overallScore >= 80 ? "text-green-600" : t.overallScore >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                            {t.overallScore}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {started.toLocaleString("id-ID")}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {duration != null ? `${duration}s` : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(`/report/${t.id}`, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {loadTests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4" />
+              Load Tests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>URL</TableHead>
+                    <TableHead>Pengguna</TableHead>
+                    <TableHead>VUs</TableHead>
+                    <TableHead>Durasi</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadTests.map((lt) => {
+                    const ltStatusCfg = statusConfig[lt.status] || { label: lt.status, icon: AlertCircle, variant: "outline" };
+                    const LtStatusIcon = ltStatusCfg.icon;
+                    return (
+                      <TableRow key={lt.id}>
+                        <TableCell className="max-w-[200px] truncate font-medium" title={lt.url}>
+                          {lt.url}
+                        </TableCell>
+                        <TableCell>
+                          {lt.user ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm">{lt.user.name}</span>
+                              <span className="text-xs text-muted-foreground">{lt.user.email}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Anonim</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{lt.vus}</TableCell>
+                        <TableCell>{lt.duration}s</TableCell>
+                        <TableCell>
+                          <Badge variant={ltStatusCfg.variant} className="gap-1">
+                            <LtStatusIcon className="h-3 w-3" />
+                            {ltStatusCfg.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(lt.createdAt).toLocaleString("id-ID")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => window.open(`/load-test/report/${lt.id}`, "_blank")}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-function StatCard({ title, value, suffix }: { title: string; value: number; suffix?: string }) {
+function StatCard({ title, value, suffix, icon: Icon }: { title: string; value: number; suffix?: string; icon: React.ElementType }) {
   return (
     <Card>
       <CardContent className="p-6">
-        <p className="text-sm text-muted-foreground">{title}</p>
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{title}</p>
+        </div>
         <p className="mt-2 text-3xl font-bold">{value}{suffix}</p>
       </CardContent>
     </Card>

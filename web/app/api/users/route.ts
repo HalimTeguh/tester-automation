@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, requireAdmin } from "@/lib/auth";
 
 export async function GET() {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true, updatedAt: true },
@@ -11,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const body = await request.json().catch(() => null);
   if (!body || !body.email || !body.name || !body.password) {
     return NextResponse.json({ error: "Semua field wajib diisi" }, { status: 400 });

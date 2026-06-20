@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, requireAdmin } from "@/lib/auth";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const { id } = await params;
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
@@ -23,6 +26,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const { id } = await params;
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ ok: true });
