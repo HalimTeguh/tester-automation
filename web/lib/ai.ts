@@ -9,8 +9,8 @@ interface Finding {
 
 export async function generateAiReport(url: string, score: number, findings: Finding[]) {
   const apiKey = process.env.OPENCODE_API_KEY || process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENCODE_BASE_URL || process.env.OPENAI_BASE_URL || "https://api.opencode.ai/v1";
-  const model = process.env.OPENCODE_MODEL || process.env.OPENAI_MODEL || "kimi-k2.6";
+  const baseUrl = process.env.OPENCODE_BASE_URL || process.env.OPENAI_BASE_URL || "https://opencode.ai/zen/go/v1";
+  const model = process.env.OPENCODE_MODEL || process.env.OPENAI_MODEL || "deepseek-v4-flash";
 
   if (!apiKey) {
     return {
@@ -58,17 +58,33 @@ Format jawaban JSON seperti ini:
       }),
     });
 
+    const responseText = await res.text();
+
     if (!res.ok) {
-      const text = await res.text();
-      console.error("AI API error:", text);
+      console.error("AI API HTTP error:", res.status, responseText);
       return {
-        summary: "Gagal menghubungi API AI. Silakan periksa API key dan base URL.",
-        fixPlan: "Pastikan OPENCODE_API_KEY, OPENCODE_BASE_URL, dan OPENCODE_MODEL sudah benar di .env.",
+        summary: `Gagal menghubungi API AI (HTTP ${res.status}).`,
+        fixPlan: `Periksa konfigurasi .env — pastikan OPENCODE_BASE_URL (atau OPENAI_BASE_URL) dan API key sesuai dengan provider yang kamu gunakan.`,
       };
     }
 
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    // Handle non-JSON responses (e.g. "Not Found" from wrong endpoint)
+    let data: any;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error("AI API returned non-JSON:", responseText.substring(0, 200));
+      return {
+        summary: `API AI mengembalikan respons yang tidak valid.`,
+        fixPlan: `Base URL API mungkin salah. Cek apakah \`${baseUrl}\` adalah endpoint yang benar untuk provider AI kamu.`,
+      };
+    }
+
+    const message = data.choices?.[0]?.message || {};
+    // Some models (e.g. DeepSeek) return reasoning_content separately
+    const content = [message.reasoning_content, message.content]
+      .filter(Boolean)
+      .join("\n\n");
 
     // Try to parse JSON from content
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -85,11 +101,11 @@ Format jawaban JSON seperti ini:
     }
 
     return { summary: content, fixPlan: "" };
-  } catch (err) {
+  } catch (err: any) {
     console.error("AI generation error:", err);
     return {
       summary: "Terjadi kesalahan saat meminta analisis AI.",
-      fixPlan: "Silakan coba lagi nanti atau periksa koneksi ke API AI.",
+      fixPlan: `Detail error: ${err.message || "Koneksi ke API AI gagal"}. Periksa koneksi internet dan konfigurasi .env.`,
     };
   }
 }
