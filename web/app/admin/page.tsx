@@ -29,6 +29,7 @@ import {
   Activity,
   ExternalLink,
   Search,
+  Brain,
 } from "lucide-react";
 
 interface User {
@@ -82,6 +83,7 @@ export default function AdminPage() {
           <TabsTrigger value="home"><Home className="mr-2 h-4 w-4" /> Home</TabsTrigger>
           <TabsTrigger value="about"><Info className="mr-2 h-4 w-4" /> Tentang</TabsTrigger>
           <TabsTrigger value="security"><Shield className="mr-2 h-4 w-4" /> Keamanan</TabsTrigger>
+          <TabsTrigger value="ai-config"><Brain className="mr-2 h-4 w-4" /> AI</TabsTrigger>
           <TabsTrigger value="webhooks"><Webhook className="mr-2 h-4 w-4" /> Webhooks</TabsTrigger>
           <TabsTrigger value="users"><Users className="mr-2 h-4 w-4" /> Pengguna</TabsTrigger>
         </TabsList>
@@ -91,6 +93,7 @@ export default function AdminPage() {
         <TabsContent value="home"><HomeTab /></TabsContent>
         <TabsContent value="about"><AboutTab /></TabsContent>
         <TabsContent value="security"><SecurityTab /></TabsContent>
+        <TabsContent value="ai-config"><AiConfigTab /></TabsContent>
         <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
       </Tabs>
@@ -934,6 +937,273 @@ function UsersTab() {
                     <Button variant="ghost" size="icon" onClick={() => remove(u.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ---------- AI Config ----------
+interface AiProvider {
+  id: string;
+  name: string;
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  maxTokens: number;
+  isActive: boolean;
+}
+
+function AiConfigTab() {
+  const [providers, setProviders] = useState<AiProvider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    provider: "opencode",
+    baseUrl: "https://opencode.ai/zen/go/v1",
+    apiKey: "",
+    model: "qwen-max",
+    maxTokens: 8000,
+    isActive: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
+
+  const load = () => {
+    fetch("/api/admin/ai-providers")
+      .then((r) => r.json())
+      .then((data) => { setProviders(data); setLoading(false); })
+      .catch(() => { toast.error("Gagal memuat konfigurasi AI"); setLoading(false); });
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const create = async () => {
+    if (!form.name || !form.apiKey || !form.baseUrl || !form.model) {
+      toast.error("Nama, API Key, Base URL, dan Model wajib diisi");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/admin/ai-providers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setSaving(false);
+    if (res.ok) {
+      toast.success("Provider AI ditambahkan");
+      setForm({ name: "", provider: "opencode", baseUrl: "https://opencode.ai/zen/go/v1", apiKey: "", model: "qwen-max", maxTokens: 8000, isActive: false });
+      setShowForm(false);
+      load();
+    } else {
+      toast.error("Gagal menambah provider AI");
+    }
+  };
+
+  const update = async (id: string, body: Partial<AiProvider>) => {
+    const res = await fetch(`/api/admin/ai-providers/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) { toast.success("Provider diperbarui"); load(); }
+    else toast.error("Gagal memperbarui provider");
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Hapus provider AI ini?")) return;
+    const res = await fetch(`/api/admin/ai-providers/${id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Provider dihapus"); load(); }
+    else toast.error("Gagal menghapus provider");
+  };
+
+  const setActive = async (id: string) => {
+    const res = await fetch(`/api/admin/ai-providers/${id}/set-active`, { method: "POST" });
+    if (res.ok) { toast.success("Provider diaktifkan"); load(); }
+    else toast.error("Gagal mengaktifkan provider");
+  };
+
+  const testConnection = async (provider: AiProvider) => {
+    setTesting(provider.id);
+    try {
+      const res = await fetch(`${provider.baseUrl}/models`, {
+        headers: { Authorization: `Bearer ${provider.apiKey}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const models = data.data?.map((m: any) => m.id || m.model) || [];
+        toast.success(`Koneksi berhasil! ${models.length} model tersedia.`, {
+          description: models.slice(0, 5).join(", ") + (models.length > 5 ? `... dan ${models.length - 5} lainnya` : ""),
+        });
+      } else {
+        toast.error(`Koneksi gagal (HTTP ${res.status})`);
+      }
+    } catch {
+      toast.error("Gagal terhubung ke provider");
+    }
+    setTesting(null);
+  };
+
+  const providerOptions = [
+    { value: "opencode", label: "OpenCode" },
+    { value: "openai", label: "OpenAI" },
+    { value: "openrouter", label: "OpenRouter" },
+    { value: "groq", label: "Groq" },
+    { value: "together", label: "Together AI" },
+    { value: "deepseek", label: "DeepSeek" },
+    { value: "claude", label: "Claude (Anthropic)" },
+    { value: "custom", label: "Custom" },
+  ];
+
+  const presetUrls: Record<string, string> = {
+    opencode: "https://opencode.ai/zen/go/v1",
+    openai: "https://api.openai.com/v1",
+    openrouter: "https://openrouter.ai/api/v1",
+    groq: "https://api.groq.com/openai/v1",
+    together: "https://api.together.xyz/v1",
+    deepseek: "https://api.deepseek.com/v1",
+    claude: "https://api.anthropic.com/v1",
+    custom: "",
+  };
+
+  const handleProviderChange = (value: string) => {
+    setForm({
+      ...form,
+      provider: value,
+      baseUrl: presetUrls[value] || form.baseUrl,
+    });
+  };
+
+  if (loading) return <Loader2 className="h-6 w-6 animate-spin" />;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Konfigurasi Provider AI</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Atur provider AI yang digunakan untuk analisis laporan. Hanya satu provider yang aktif pada satu waktu.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {showForm ? "Batal" : "Tambah Provider"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showForm && (
+            <div className="mb-6 rounded-lg border border-border p-4">
+              <h3 className="mb-3 text-sm font-semibold">Provider Baru</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Nama Tampilan" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Provider</label>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.provider}
+                    onChange={(e) => handleProviderChange(e.target.value)}
+                  >
+                    {providerOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <Field label="Base URL" value={form.baseUrl} onChange={(v) => setForm({ ...form, baseUrl: v })} />
+                <Field label="Model" value={form.model} onChange={(v) => setForm({ ...form, model: v })} />
+                <Field label="API Key" value={form.apiKey} onChange={(v) => setForm({ ...form, apiKey: v })} />
+                <Field label="Max Tokens" value={String(form.maxTokens)} onChange={(v) => setForm({ ...form, maxTokens: Number(v) })} type="number" />
+              </div>
+              <div className="mt-3 flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  />
+                  Aktifkan setelah disimpan
+                </label>
+                <Button size="sm" onClick={create} disabled={saving}>
+                  {saving ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama</TableHead>
+                <TableHead>Provider</TableHead>
+                <TableHead>Model</TableHead>
+                <TableHead>Max Tokens</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {providers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    Belum ada konfigurasi AI. Tambahkan provider untuk mengaktifkan analisis AI.
+                  </TableCell>
+                </TableRow>
+              )}
+              {providers.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span>{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{p.baseUrl}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{p.provider}</Badge>
+                  </TableCell>
+                  <TableCell>{p.model}</TableCell>
+                  <TableCell>{p.maxTokens.toLocaleString()}</TableCell>
+                  <TableCell>
+                    {p.isActive ? (
+                      <Badge variant="default" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Aktif
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer"
+                        onClick={() => setActive(p.id)}
+                      >
+                        Nonaktif
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => testConnection(p)}
+                        disabled={testing === p.id}
+                        title="Test koneksi"
+                      >
+                        {testing === p.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Activity className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => remove(p.id)} title="Hapus">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -271,3 +271,16 @@ model WebhookDelivery {
   responseBody        String?
   deliveredAt         DateTime        @default(now())
 }
+
+model AiProviderConfig {
+  id         String   @id @default(cuid())
+  name       String
+  provider   String   // opencode, openai, openrouter, claude, custom
+  baseUrl    String
+  apiKey     String
+  model      String
+  maxTokens  Int      @default(8000)
+  isActive   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

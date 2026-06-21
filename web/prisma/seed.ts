@@ -17,6 +17,7 @@ async function main() {
   await prisma.loadTest.deleteMany();
   await prisma.userActivity.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.aiProviderConfig.deleteMany();
   await prisma.settings.deleteMany();
   await prisma.themeConfig.deleteMany();
   await prisma.privacyCommitment.deleteMany();
@@ -280,7 +281,20 @@ async function main() {
     },
   });
 
-  // 5. Users
+  // 5. AI Provider Config (default: OpenCode dengan Qwen)
+  await prisma.aiProviderConfig.create({
+    data: {
+      name: "OpenCode AI (Default)",
+      provider: "opencode",
+      baseUrl: "https://opencode.ai/zen/go/v1",
+      apiKey: "",
+      model: "qwen-max",
+      maxTokens: 8000,
+      isActive: true,
+    },
+  });
+
+  // 6. Users
   const admin = await prisma.user.create({
     data: {
       email: "admin@webqa.local",

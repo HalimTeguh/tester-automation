@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma";
+
 interface Finding {
   category: string;
   severity: string;
@@ -5,6 +7,40 @@ interface Finding {
   description: string;
   impact: string;
   fix: string;
+}
+
+interface AiConfig {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  maxTokens: number;
+}
+
+async function getActiveAiConfig(): Promise<AiConfig | null> {
+  const dbConfig = await prisma.aiProviderConfig.findFirst({
+    where: { isActive: true },
+  });
+
+  if (dbConfig && dbConfig.apiKey) {
+    return {
+      apiKey: dbConfig.apiKey,
+      baseUrl: dbConfig.baseUrl,
+      model: dbConfig.model,
+      maxTokens: dbConfig.maxTokens,
+    };
+  }
+
+  // Fallback ke environment variables
+  const apiKey = process.env.OPENCODE_API_KEY || process.env.OPENAI_API_KEY;
+  const baseUrl = process.env.OPENCODE_BASE_URL || process.env.OPENAI_BASE_URL || "https://opencode.ai/zen/go/v1";
+  const model = process.env.OPENCODE_MODEL || process.env.OPENAI_MODEL || "qwen-max";
+
+  if (!apiKey) return null;
+
+  const envMax = process.env.AI_MAX_TOKENS ? parseInt(process.env.AI_MAX_TOKENS, 10) : NaN;
+  const maxTokens = !isNaN(envMax) && envMax > 0 ? envMax : getDefaultMaxTokens(model);
+
+  return { apiKey, baseUrl, model, maxTokens };
 }
 
 function isReasoningModel(model: string): boolean {
@@ -21,11 +57,7 @@ function isReasoningModel(model: string): boolean {
   return reasoningModels.some((r) => model.toLowerCase().includes(r));
 }
 
-function getMaxTokens(model: string): number {
-  const envMax = process.env.AI_MAX_TOKENS ? parseInt(process.env.AI_MAX_TOKENS, 10) : NaN;
-  if (!isNaN(envMax) && envMax > 0) {
-    return envMax;
-  }
+function getDefaultMaxTokens(model: string): number {
   // Reasoning models need larger token budget because they consume tokens for reasoning
   if (isReasoningModel(model)) {
     return 12000;
@@ -34,17 +66,16 @@ function getMaxTokens(model: string): number {
 }
 
 export async function generateAiReport(url: string, score: number, findings: Finding[]) {
-  const apiKey = process.env.OPENCODE_API_KEY || process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENCODE_BASE_URL || process.env.OPENAI_BASE_URL || "https://opencode.ai/zen/go/v1";
-  const model = process.env.OPENCODE_MODEL || process.env.OPENAI_MODEL || "qwen-max";
-  const maxTokens = getMaxTokens(model);
+  const config = await getActiveAiConfig();
 
-  if (!apiKey) {
+  if (!config) {
     return {
-      summary: "Analisis AI tidak tersedia karena API key belum dikonfigurasi.",
-      fixPlan: "Tambahkan OPENCODE_API_KEY atau OPENAI_API_KEY di file .env untuk mengaktifkan analisis AI.",
+      summary: "Analisis AI tidak tersedia karena konfigurasi belum lengkap.",
+      fixPlan: "Masuk ke panel Admin > Konfigurasi AI untuk menambahkan provider AI, atau tambahkan OPENCODE_API_KEY di file .env.",
     };
   }
+
+  const { apiKey, baseUrl, model, maxTokens } = config;
 
   const prompt = `Website ${url} baru saja diuji otomatis dan dapat skor ${score}/100. Berikut temuan dari scanner:
 ${findings
@@ -94,7 +125,7 @@ Format:
       console.error("AI API HTTP error:", res.status, responseText);
       return {
         summary: `Gagal menghubungi API AI (HTTP ${res.status}).`,
-        fixPlan: `Periksa konfigurasi .env — pastikan OPENCODE_BASE_URL (atau OPENAI_BASE_URL) dan API key sesuai dengan provider yang kamu gunakan.`,
+        fixPlan: `Periksa konfigurasi di Admin > Konfigurasi AI — pastikan Base URL dan API key sesuai dengan provider yang kamu gunakan.`,
       };
     }
 
@@ -120,8 +151,8 @@ Format:
       return {
         summary: `Analisis AI terpotong karena batas token (${maxTokens.toLocaleString()}). Model ${model} ${isReasoning ? "adalah reasoning model yang memakan token besar." : "membutuhkan lebih banyak token untuk output ini."}`,
         fixPlan: isReasoning
-          ? `1. Ganti model di .env ke qwen-plus atau qwen-max (non-reasoning)\n2. Atau tambah AI_MAX_TOKENS=16000 di .env jika ingin tetap pakai ${model}`
-          : `1. Tambah AI_MAX_TOKENS=12000 di .env untuk menaikkan batas token\n2. Atau ganti ke model yang lebih hemat token seperti qwen-plus`,
+          ? `1. Ganti model di Admin > Konfigurasi AI ke qwen-plus atau qwen-max (non-reasoning)\n2. Atau naikkan Max Tokens di konfigurasi jika ingin tetap pakai ${model}`
+          : `1. Naikkan Max Tokens di Admin > Konfigurasi AI\n2. Atau ganti ke model yang lebih hemat token seperti qwen-plus`,
       };
     }
 
@@ -136,8 +167,8 @@ Format:
       return {
         summary: `Analisis AI gagal dihasilkan — model ${model} mengembalikan respons kosong. ${isReasoning ? "Model reasoning sering kehabisan token budget untuk reasoning." : "Coba naikkan batas token atau ganti model."}`,
         fixPlan: isReasoning
-          ? `1. Ganti model di .env ke qwen-plus atau qwen-max (lebih stabil)\n2. Atau tambah AI_MAX_TOKENS=16000 di .env untuk model reasoning ${model}`
-          : `1. Tambah AI_MAX_TOKENS=12000 di .env\n2. Atau ganti ke qwen-plus jika model ${model} sering error`,
+          ? `1. Ganti model di Admin > Konfigurasi AI ke qwen-plus atau qwen-max (lebih stabil)\n2. Atau naikkan Max Tokens di konfigurasi untuk model reasoning ${model}`
+          : `1. Naikkan Max Tokens di Admin > Konfigurasi AI\n2. Atau ganti ke qwen-plus jika model ${model} sering error`,
       };
     }
 
@@ -179,7 +210,7 @@ Format:
     console.error("AI generation error:", err);
     return {
       summary: "Terjadi kesalahan saat meminta analisis AI.",
-      fixPlan: `Detail error: ${err.message || "Koneksi ke API AI gagal"}. Periksa koneksi internet dan konfigurasi .env.`,
+      fixPlan: `Detail error: ${err.message || "Koneksi ke API AI gagal"}. Periksa koneksi internet dan konfigurasi di Admin > Konfigurasi AI.`,
     };
   }
 }
