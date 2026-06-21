@@ -11,6 +11,14 @@ const PUBLIC_API_PREFIXES = [
   "/api/auth/register",
   "/api/auth/logout",
   "/api/company-profile",
+  "/api/auth",
+  "/api/user/me",
+  "/api/company-profile",
+  "/api/about",
+  "/api/security",
+  "/api/test-runs",
+  "/api/load-tests",
+  "/api/settings/public",
 ];
 const ADMIN_API_PREFIXES = ["/api/users", "/api/settings", "/api/admin", "/api/webhooks"];
 
