@@ -21,7 +21,9 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Route,
 } from "lucide-react";
+import ScenarioManager from "@/components/scenario-manager";
 
 interface User {
   id: string;
@@ -75,6 +77,7 @@ export default function AdminPage() {
           <TabsTrigger value="about"><Info className="mr-2 h-4 w-4" /> Tentang</TabsTrigger>
           <TabsTrigger value="security"><Shield className="mr-2 h-4 w-4" /> Keamanan</TabsTrigger>
           <TabsTrigger value="webhooks"><Webhook className="mr-2 h-4 w-4" /> Webhooks</TabsTrigger>
+          <TabsTrigger value="scenarios"><Route className="mr-2 h-4 w-4" /> Skenario</TabsTrigger>
           <TabsTrigger value="users"><Users className="mr-2 h-4 w-4" /> Pengguna</TabsTrigger>
         </TabsList>
 
@@ -84,6 +87,7 @@ export default function AdminPage() {
         <TabsContent value="about"><AboutTab /></TabsContent>
         <TabsContent value="security"><SecurityTab /></TabsContent>
         <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
+        <TabsContent value="scenarios"><ScenarioManager /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
       </Tabs>
     </div>

@@ -20,6 +20,9 @@ import {
   XCircle,
   Copy,
   Check,
+  Route,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 
 interface ApiIssue {
@@ -41,6 +44,33 @@ interface ApiTestResult {
   issues: ApiIssue[];
 }
 
+interface ApiScenarioStep {
+  order: number;
+  action: string;
+  selector?: string | null;
+  value?: string | null;
+  assertionText?: string | null;
+  waitMs?: number | null;
+}
+
+interface ApiScenario {
+  id: string;
+  name: string;
+  description: string;
+  startUrl: string;
+  steps: ApiScenarioStep[];
+}
+
+interface ApiScenarioResult {
+  id: string;
+  status: string;
+  durationMs: number | null;
+  errorMessage: string | null;
+  screenshotPath: string | null;
+  stepResults: string; // JSON
+  testScenario: ApiScenario;
+}
+
 interface ApiTestRun {
   id: string;
   url: string;
@@ -50,6 +80,7 @@ interface ApiTestRun {
   aiSummary: string | null;
   aiFixPlan: string | null;
   testResults: ApiTestResult[];
+  scenarioResults: ApiScenarioResult[];
 }
 
 const categoryLabel: Record<string, string> = {
@@ -236,6 +267,7 @@ export default function ReportPage() {
         <TabsList className="bg-muted">
           <TabsTrigger value="ai">Ringkasan AI</TabsTrigger>
           <TabsTrigger value="issues">Daftar Issue</TabsTrigger>
+          <TabsTrigger value="scenarios">User Flow</TabsTrigger>
         </TabsList>
 
         <TabsContent value="ai" className="mt-4 space-y-4">
@@ -301,6 +333,74 @@ export default function ReportPage() {
             }))}
             url={url}
           />
+        </TabsContent>
+
+        <TabsContent value="scenarios" className="mt-4 space-y-4">
+          {run.scenarioResults && run.scenarioResults.length > 0 ? (
+            run.scenarioResults.map((sr) => {
+              const steps: { order: number; action: string; selector?: string | null; value?: string | null; status: string; message?: string; durationMs: number }[] =
+                sr.stepResults ? JSON.parse(sr.stepResults) : [];
+              return (
+                <Card key={sr.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Route className="h-4 w-4 text-primary" />
+                      {sr.testScenario.name}
+                      {sr.status === "passed" ? (
+                        <Badge className="bg-green-600"><CheckCircle2 className="mr-1 h-3 w-3" /> Lolos</Badge>
+                      ) : sr.status === "failed" ? (
+                        <Badge variant="destructive"><XCircle className="mr-1 h-3 w-3" /> Gagal</Badge>
+                      ) : (
+                        <Badge variant="secondary">Dilewati</Badge>
+                      )}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">{sr.testScenario.description}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex items-center gap-4 text-muted-foreground">
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {sr.durationMs ?? 0}ms</span>
+                      <span>Start URL: {sr.testScenario.startUrl}</span>
+                    </div>
+                    {sr.errorMessage && (
+                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-destructive">
+                        {sr.errorMessage}
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {steps.map((step, idx) => (
+                        <div key={idx} className="flex items-start gap-3 rounded-md border border-border p-3">
+                          <div className="mt-0.5">
+                            {step.status === "passed" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : step.status === "failed" ? <XCircle className="h-4 w-4 text-destructive" /> : <Info className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {idx + 1}. {step.action}
+                              {step.selector && <span className="ml-2 font-normal text-muted-foreground">{step.selector}</span>}
+                            </p>
+                            {step.value && <p className="text-muted-foreground">Value: {step.value}</p>}
+                            {step.message && <p className="text-muted-foreground">{step.message}</p>}
+                            <p className="text-xs text-muted-foreground">{step.durationMs}ms</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {sr.screenshotPath && (
+                      <div>
+                        <p className="mb-2 font-medium">Screenshot:</p>
+                        <img src={sr.screenshotPath} alt={`Screenshot ${sr.testScenario.name}`} className="rounded-md border border-border max-w-md" />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Tidak ada user flow scenario yang dijalankan untuk tes ini.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

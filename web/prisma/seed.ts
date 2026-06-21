@@ -311,7 +311,6 @@ async function main() {
       overallScore: 78,
       startedAt: new Date(Date.now() - 1000 * 60 * 5),
       completedAt: new Date(),
-      config: JSON.stringify({ source: "seed" }),
       testResults: {
         create: [
           {

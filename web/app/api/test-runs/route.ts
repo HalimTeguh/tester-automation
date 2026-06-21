@@ -23,7 +23,6 @@ export async function POST(request: Request) {
       preset: body.preset || "pre-launch",
       status: "pending",
       userId,
-      config: JSON.stringify(body.config || {}),
     },
   });
 

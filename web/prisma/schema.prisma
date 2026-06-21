@@ -193,19 +193,61 @@ model UserActivity {
 }
 
 model TestRun {
-  id            String        @id @default(cuid())
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  url           String
-  preset        String
-  status        String        @default("pending")
-  overallScore  Int?
-  aiSummary     String?
-  aiFixPlan     String?
-  startedAt     DateTime      @default(now())
-  completedAt   DateTime?
-  config        String?
-  testResults   TestResult[]
+  id              String        @id @default(cuid())
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  url             String
+  preset          String        @default("pre-launch")
+  status          String        @default("pending")
+  overallScore    Int?
+  aiSummary       String?
+  aiFixPlan       String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  testResults     TestResult[]
+  scenarioResults ScenarioResult[]
+}
+
+model TestScenario {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  startUrl    String
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  steps       ScenarioStep[]
+  results     ScenarioResult[]
+}
+
+model ScenarioStep {
+  id            String       @id @default(cuid())
+  testScenarioId String
+  testScenario  TestScenario @relation(fields: [testScenarioId], references: [id], onDelete: Cascade)
+  order         Int
+  action        String       // navigate, click, type, submit, wait, assertText, assertVisible, assertValue, screenshot, hover, scroll
+  selector      String?
+  value         String?
+  assertionText String?
+  waitMs        Int          @default(0)
+}
+
+model ScenarioResult {
+  id             String       @id @default(cuid())
+  testRunId      String
+  testRun        TestRun      @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testScenarioId String
+  testScenario   TestScenario @relation(fields: [testScenarioId], references: [id], onDelete: Cascade)
+  status         String       // passed, failed, skipped
+  durationMs     Int?
+  errorMessage   String?
+  screenshotPath String?
+  stepResults    String?      // JSON array of per-step results
+  createdAt      DateTime     @default(now())
+
+  @@unique([testRunId, testScenarioId])
 }
 
 model TestResult {

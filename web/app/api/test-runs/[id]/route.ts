@@ -9,6 +9,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       testResults: {
         include: { issues: true },
       },
+      scenarioResults: {
+        include: {
+          testScenario: {
+            include: { steps: { orderBy: { order: "asc" } } },
+          },
+        },
+      },
       user: { select: { id: true, name: true } },
     },
   });
