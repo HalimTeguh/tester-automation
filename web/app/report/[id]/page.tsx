@@ -20,6 +20,8 @@ import {
   XCircle,
   Copy,
   Check,
+  Sparkles,
+  List,
 } from "lucide-react";
 
 interface ApiIssue {
@@ -233,25 +235,54 @@ export default function ReportPage() {
       </div>
 
       <Tabs defaultValue="ai" className="mt-8">
-        <TabsList className="bg-muted">
-          <TabsTrigger value="ai">Ringkasan AI</TabsTrigger>
-          <TabsTrigger value="issues">Daftar Issue</TabsTrigger>
+        <TabsList className="w-full gap-1 rounded-xl border bg-background p-1 shadow-sm sm:w-auto">
+          <TabsTrigger
+            value="ai"
+            className="flex-1 gap-2 rounded-lg px-5 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm sm:flex-initial"
+          >
+            <Sparkles className="h-4 w-4" />
+            Ringkasan AI
+          </TabsTrigger>
+          <TabsTrigger
+            value="issues"
+            className="flex-1 gap-2 rounded-lg px-5 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm sm:flex-initial"
+          >
+            <List className="h-4 w-4" />
+            Daftar Issue
+            <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-bold text-muted-foreground data-[state=active]:bg-primary-foreground data-[state=active]:text-primary">
+              {allIssues.length}
+            </span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ai" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
+        <TabsContent value="ai" className="mt-5 space-y-5">
+          <Card className="border shadow-sm">
+            <CardHeader className="bg-muted/30">
               <CardTitle className="flex items-center gap-2 text-base">
                 <MessageSquare className="h-4 w-4 text-primary" />
                 Analisis AI
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
+            <CardContent className="space-y-4 pt-5">
               {run.aiSummary ? (
-                <div className="prose prose-sm max-w-none dark:prose-invert">
+                <div className="space-y-3 text-justify text-base leading-relaxed text-foreground">
                   {run.aiSummary.split("\n").map((p, i) =>
-                    p.trim() ? <p key={i}>{p}</p> : null
+                    p.trim() ? (
+                      <p key={i} className="indent-4">
+                        {p}
+                      </p>
+                    ) : null
                   )}
+                </div>
+              ) : run.aiSummary === "" ? (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+                  <p className="font-medium">Analisis AI gagal dihasilkan</p>
+                  <p className="mt-1">
+                    Model kemungkinan kehabisan token saat reasoning. Coba ganti ke{" "}
+                    <code className="rounded bg-muted px-1 py-0.5">qwen-max</code> atau{" "}
+                    <code className="rounded bg-muted px-1 py-0.5">qwen-plus</code> di{" "}
+                    <code className="rounded bg-muted px-1 py-0.5">.env</code> lalu jalankan ulang tes.
+                  </p>
                 </div>
               ) : (
                 <p className="text-muted-foreground">
@@ -262,45 +293,60 @@ export default function ReportPage() {
           </Card>
 
           {run.aiFixPlan && (
-            <Card>
-              <CardHeader>
+            <Card className="border shadow-sm">
+              <CardHeader className="bg-muted/30">
                 <CardTitle className="text-base">Rencana Perbaikan Prioritas</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="whitespace-pre-line text-sm leading-relaxed">
-                  {run.aiFixPlan}
-                </div>
+              <CardContent className="pt-5">
+                <ol className="list-decimal space-y-3 pl-5 text-base leading-relaxed text-foreground">
+                  {run.aiFixPlan
+                    .split(/\n\s*(?=\d+[\.\)]\s)/)
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                    .map((item, i) => (
+                      <li key={i} className="pl-2 text-justify marker:font-semibold marker:text-primary">
+                        {item.replace(/^\d+[\.\)]\s*/, "")}
+                      </li>
+                    ))}
+                </ol>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="issues" className="mt-4">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              {allIssues.length} issue ditemukan
-            </p>
-            <Button variant="outline" size="sm" onClick={copyAllPrompts}>
-              {copiedAll ? (
-                <>
-                  <Check className="mr-1.5 h-4 w-4" />
-                  Tersalin
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-1.5 h-4 w-4" />
-                  Salin Prompt Semua Issue
-                </>
-              )}
-            </Button>
-          </div>
-          <IssueList
-            issues={allIssues.map((i) => ({
-              ...i,
-              code: i.code ?? undefined,
-            }))}
-            url={url}
-          />
+        <TabsContent value="issues" className="mt-5">
+          <Card className="border shadow-sm">
+            <CardHeader className="flex flex-col gap-3 bg-muted/30 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-base">Daftar Issue</CardTitle>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {allIssues.length} issue ditemukan
+                </p>
+                <Button variant="outline" size="sm" onClick={copyAllPrompts}>
+                  {copiedAll ? (
+                    <>
+                      <Check className="mr-1.5 h-4 w-4" />
+                      Tersalin
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-1.5 h-4 w-4" />
+                      Salin Prompt
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-5">
+              <IssueList
+                issues={allIssues.map((i) => ({
+                  ...i,
+                  code: i.code ?? undefined,
+                }))}
+                url={url}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
