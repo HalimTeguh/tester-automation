@@ -33,7 +33,7 @@ async function getActiveAiConfig(): Promise<AiConfig | null> {
   // Fallback ke environment variables
   const apiKey = process.env.OPENCODE_API_KEY || process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENCODE_BASE_URL || process.env.OPENAI_BASE_URL || "https://opencode.ai/zen/go/v1";
-  const model = process.env.OPENCODE_MODEL || process.env.OPENAI_MODEL || "qwen-max";
+  const model = process.env.OPENCODE_MODEL || process.env.OPENAI_MODEL || "kimi-k2.6";
 
   if (!apiKey) return null;
 
@@ -123,6 +123,15 @@ Format:
 
     if (!res.ok) {
       console.error("AI API HTTP error:", res.status, responseText);
+      
+      // Cek apakah error karena model tidak valid
+      if (responseText.includes("not supported") || responseText.includes("Model")) {
+        return {
+          summary: `Gagal menghubungi API AI — model "${model}" tidak didukung oleh provider ini.`,
+          fixPlan: `1. Masuk ke Admin > Konfigurasi AI\n2. Klik tombol "Test" untuk melihat daftar model yang tersedia\n3. Pilih model yang valid dari daftar tersebut`,
+        };
+      }
+      
       return {
         summary: `Gagal menghubungi API AI (HTTP ${res.status}).`,
         fixPlan: `Periksa konfigurasi di Admin > Konfigurasi AI — pastikan Base URL dan API key sesuai dengan provider yang kamu gunakan.`,

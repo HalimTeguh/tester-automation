@@ -281,15 +281,15 @@ async function main() {
     },
   });
 
-  // 5. AI Provider Config (default: OpenCode dengan Qwen)
+  // 5. AI Provider Config (default: OpenCode dengan model valid)
   await prisma.aiProviderConfig.create({
     data: {
       name: "OpenCode AI (Default)",
       provider: "opencode",
       baseUrl: "https://opencode.ai/zen/go/v1",
       apiKey: "",
-      model: "qwen-max",
-      maxTokens: 8000,
+      model: "kimi-k2.6",
+      maxTokens: 12000,
       isActive: true,
     },
   });

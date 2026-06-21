@@ -975,6 +975,8 @@ function AiConfigTab() {
   });
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   const load = () => {
     fetch("/api/admin/ai-providers")
@@ -1033,22 +1035,55 @@ function AiConfigTab() {
   const testConnection = async (provider: AiProvider) => {
     setTesting(provider.id);
     try {
-      const res = await fetch(`${provider.baseUrl}/models`, {
-        headers: { Authorization: `Bearer ${provider.apiKey}` },
+      const res = await fetch("/api/admin/ai-providers/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baseUrl: provider.baseUrl, apiKey: provider.apiKey }),
       });
       if (res.ok) {
         const data = await res.json();
-        const models = data.data?.map((m: any) => m.id || m.model) || [];
+        const models = data.models?.map((m: any) => m.id || m.name) || [];
+        setAvailableModels(models);
         toast.success(`Koneksi berhasil! ${models.length} model tersedia.`, {
           description: models.slice(0, 5).join(", ") + (models.length > 5 ? `... dan ${models.length - 5} lainnya` : ""),
         });
       } else {
-        toast.error(`Koneksi gagal (HTTP ${res.status})`);
+        const err = await res.json().catch(() => ({}));
+        toast.error(`Koneksi gagal: ${err.error || "Unknown error"}`);
       }
     } catch {
       toast.error("Gagal terhubung ke provider");
     }
     setTesting(null);
+  };
+
+  const fetchModelsForForm = async () => {
+    if (!form.baseUrl || !form.apiKey) {
+      toast.error("Isi Base URL dan API Key dulu");
+      return;
+    }
+    setLoadingModels(true);
+    try {
+      const res = await fetch("/api/admin/ai-providers/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baseUrl: form.baseUrl, apiKey: form.apiKey }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const models = data.models?.map((m: any) => m.id || m.name) || [];
+        setAvailableModels(models);
+        if (models.length > 0 && !form.model) {
+          setForm({ ...form, model: models[0] });
+        }
+        toast.success(`${models.length} model tersedia`);
+      } else {
+        toast.error("Gagal mengambil daftar model");
+      }
+    } catch {
+      toast.error("Gagal terhubung ke provider");
+    }
+    setLoadingModels(false);
   };
 
   const providerOptions = [
@@ -1117,7 +1152,35 @@ function AiConfigTab() {
                   </select>
                 </div>
                 <Field label="Base URL" value={form.baseUrl} onChange={(v) => setForm({ ...form, baseUrl: v })} />
-                <Field label="Model" value={form.model} onChange={(v) => setForm({ ...form, model: v })} />
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Model</label>
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={form.model}
+                      onChange={(e) => setForm({ ...form, model: e.target.value })}
+                    >
+                      <option value="">Pilih model...</option>
+                      {availableModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={fetchModelsForForm}
+                      disabled={loadingModels}
+                    >
+                      {loadingModels ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ambil Model"}
+                    </Button>
+                  </div>
+                  {availableModels.length === 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Klik "Ambil Model" untuk melihat daftar model dari provider
+                    </p>
+                  )}
+                </div>
                 <Field label="API Key" value={form.apiKey} onChange={(v) => setForm({ ...form, apiKey: v })} />
                 <Field label="Max Tokens" value={String(form.maxTokens)} onChange={(v) => setForm({ ...form, maxTokens: Number(v) })} type="number" />
               </div>
