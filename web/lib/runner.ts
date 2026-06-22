@@ -4,6 +4,7 @@ import * as net from "net";
 import * as cheerio from "cheerio";
 import { prisma } from "@/lib/prisma";
 import { generateAiReport } from "@/lib/ai";
+import { runScenarios } from "./scenarios";
 
 function getFreePort(): Promise<number> {
   return new Promise((resolve) => {
@@ -312,7 +313,7 @@ async function runHttpChecks(url: string, categories: ReturnType<typeof createCa
   return { finalUrl, loaded: true };
 }
 
-async function runBrowserChecks(url: string, categories: ReturnType<typeof createCategories>) {
+async function runBrowserChecks(url: string, testRunId: string, categories: ReturnType<typeof createCategories>) {
   const browserPort = await getFreePort();
   const browser = await chromium.launch({
     headless: true,
@@ -607,6 +608,8 @@ async function runBrowserChecks(url: string, categories: ReturnType<typeof creat
       );
     }
 
+    await runScenarios(page, testRunId, url).catch((err) => console.error("Scenario runner error:", err));
+
     return { finalUrl, loaded: true };
   } finally {
     await browser.close();
@@ -622,6 +625,7 @@ export async function runTest(testRunId: string) {
     data: { status: "running" },
   });
 
+  await prisma.scenarioResult.deleteMany({ where: { testRunId } });
   await prisma.testResult.deleteMany({ where: { testRunId } });
 
   const categories = createCategories();
@@ -630,7 +634,7 @@ export async function runTest(testRunId: string) {
 
   // Try real browser first
   try {
-    const result = await runBrowserChecks(run.url, categories);
+    const result = await runBrowserChecks(run.url, testRunId, categories);
     loaded = result.loaded;
     usedBrowser = true;
   } catch (err) {
