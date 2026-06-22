@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { normalizeAndValidateUrl } from "@/lib/utils";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -24,11 +25,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "URL wajib diisi" }, { status: 400 });
   }
 
-  const userId = request.headers.get("x-user-id") || undefined;
+  const normalizedUrl = normalizeAndValidateUrl(body.url);
+  if (!normalizedUrl) {
+    return NextResponse.json({ error: "Format URL tidak valid" }, { status: 400 });
+  }
+
+  const user = await getCurrentUser();
+  const userId = user?.sub || undefined;
 
   const run = await prisma.testRun.create({
     data: {
-      url: body.url,
+      url: normalizedUrl,
       preset: body.preset || "pre-launch",
       status: "pending",
       userId,

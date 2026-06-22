@@ -9,7 +9,7 @@ import { presets } from "@/lib/mock-data";
 import { ScanLine, Loader2 } from "lucide-react";
 
 interface UrlInputCardProps {
-  onStart?: (url: string, presetId: string) => void;
+  onStart?: (url: string, presetId: string) => void | Promise<void>;
   ctaText?: string;
 }
 
@@ -18,11 +18,15 @@ export function UrlInputCard({ onStart, ctaText }: UrlInputCardProps) {
   const [selectedPreset, setSelectedPreset] = useState("pre-launch");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
     setIsLoading(true);
-    onStart?.(url, selectedPreset);
+    try {
+      await onStart?.(url, selectedPreset);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

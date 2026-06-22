@@ -151,6 +151,50 @@ export default function ReportPage() {
   const warning = allIssues.filter((i) => i.severity === "warning").length;
   const info = allIssues.filter((i) => i.severity === "info").length;
 
+  if (run.status === "failed") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Laporan Pemeriksaan</h1>
+              <p className="text-sm text-muted-foreground">{url}</p>
+            </div>
+          </div>
+        </div>
+
+        <Card className="mt-8 border-destructive/20 bg-destructive/5">
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <XCircle className="h-12 w-12 text-destructive" />
+            <h2 className="mt-4 text-lg font-semibold">Pemeriksaan Gagal</h2>
+            <p className="mt-2 max-w-md text-muted-foreground">
+              Website tidak dapat diakses atau mengalami error kritis saat pemeriksaan. Pastikan URL benar dan website dapat dijangkau.
+            </p>
+            {allIssues.length > 0 && (
+              <div className="mt-6 w-full max-w-lg text-left">
+                <IssueList
+                  issues={allIssues.map((i) => ({
+                    ...i,
+                    code: i.code ?? undefined,
+                  }))}
+                  url={url}
+                />
+              </div>
+            )}
+            <Button asChild className="mt-6">
+              <Link href="/">Coba Lagi</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

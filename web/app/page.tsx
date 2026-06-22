@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DynamicIcon } from "@/lib/icons";
 import { Rocket } from "lucide-react";
+import { toast } from "sonner";
 
 interface CompanyProfile {
   id: string;
@@ -57,10 +58,13 @@ export default function HomePage() {
         body: JSON.stringify({ url, preset: presetId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal membuat tes");
+      if (!res.ok) {
+        toast.error(data.error || "Gagal membuat tes");
+        return;
+      }
       router.push(`/run/${data.id}`);
     } catch {
-      router.push(`/run/demo?url=${encodeURIComponent(url)}&preset=${presetId}`);
+      toast.error("Gagal membuat tes. Periksa koneksi internet.");
     }
   };
 

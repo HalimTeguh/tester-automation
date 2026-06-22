@@ -115,9 +115,10 @@ async function runHttpChecks(url: string, categories: ReturnType<typeof createCa
       `Server mengembalikan status ${res.status} untuk ${url}.`,
       "Halaman error membuat user meninggalkan website.",
       "Periksa log server, routing, dan sumber daya yang hilang.",
-      40,
+      100,
       `HTTP ${res.status}`
     );
+    return { finalUrl: url, loaded: false };
   }
 
   // Performance proxy: response duration
@@ -352,9 +353,10 @@ async function runBrowserChecks(url: string, categories: ReturnType<typeof creat
         `Server mengembalikan status ${status} untuk ${finalUrl}.`,
         "Halaman error membuat user meninggalkan website.",
         "Periksa log server, routing, dan sumber daya yang hilang.",
-        40,
+        100,
         `HTTP ${status}`
       );
+      return { finalUrl, loaded: false };
     }
 
     // Lighthouse
@@ -637,10 +639,59 @@ export async function runTest(testRunId: string) {
     loaded = result.loaded;
   }
 
+  // Abort jika website tidak bisa diakses sama sekali
   if (!loaded && categories.functionality.issues.some((i) => i.weight >= 100)) {
     await prisma.testRun.update({
       where: { id: testRunId },
-      data: { status: "failed" },
+      data: { status: "failed", overallScore: 0 },
+    });
+    await prisma.testResult.create({
+      data: {
+        testRunId,
+        category: "functionality",
+        score: 0,
+        status: "failed",
+        issues: {
+          create: categories.functionality.issues.map((issue) => ({
+            category: issue.category,
+            severity: issue.severity,
+            title: issue.title,
+            description: issue.description,
+            impact: issue.impact,
+            fix: issue.fix,
+            code: issue.code || null,
+          })),
+        },
+      },
+    });
+    return;
+  }
+
+  // Abort jika fungsionalitas kritis 0 — tidak masuk akal menilai SEO/keamanan
+  // saat website tidak berfungsi (WAF block, halaman kosong, banyak error)
+  if (categories.functionality.score === 0) {
+    await prisma.testRun.update({
+      where: { id: testRunId },
+      data: { status: "failed", overallScore: 0 },
+    });
+    await prisma.testResult.create({
+      data: {
+        testRunId,
+        category: "functionality",
+        score: 0,
+        status: "failed",
+        issues: {
+          create: categories.functionality.issues.map((issue) => ({
+            category: issue.category,
+            severity: issue.severity,
+            title: issue.title,
+            description: issue.description,
+            impact: issue.impact,
+            fix: issue.fix,
+            code: issue.code || null,
+          })),
+        },
+      },
     });
     return;
   }
